@@ -23,17 +23,24 @@ pip install -e ".[dev]"
 copy .env.example .env
 #   -> .env 를 열어 RIOT_API_KEY, DEFAULT_RIOT_ID 입력
 
-# 4) 실행 — 최근 랭크 1판 분석
-lol-jgl-agent --riot-id "이름#KR1"
-lol-jgl-agent --no-advice          # 조언 없이 지표만
+# 4) 수집 — 최근 랭크 N판 지표를 누적
+lol-jgl-agent --count 5            # 최근 5판 → reports/history.json 누적
+lol-jgl-agent --count 1 --advice   # 최신 1판 claude -p 자동 조언까지(부가)
 
-# 5) 자동 감시 — 켜두면 게임 끝날 때마다 자동 리포트
-lol-jgl-watch                      # 30초 간격 폴링, 새 경기 감지 시 리포트 열림
-lol-jgl-watch --interval 20 --no-open
+# 5) 자동 감시 — 켜두면 새 경기를 자동으로 히스토리에 적립
+lol-jgl-watch --interval 20
 
 # 6) 테스트
 pytest
 ```
+
+## 메인 워크플로우
+
+1. 랭크 몇 판 하고 온다.
+2. `lol-jgl-agent --count N` 으로 최근 N판을 `reports/history.json`에 누적한다
+   (또는 `lol-jgl-watch`를 켜두면 자동 적립).
+3. **Claude Code에게 "분석해줘"** 라고 하면, 누적된 전체 데이터를 읽어
+   새 판 + 그동안의 트렌드를 함께 짚어 채팅으로 피드백한다.
 
 ## 진행 상태 (마일스톤)
 

@@ -11,25 +11,34 @@
 - 분석 대상: **소환사의 협곡 랭크만** (queue 420/440). 일반·칼바람 제외.
 - 분석 범위: **최근 1판** (N판 추세는 2단계).
 - 리포트 톤: **간결 요약** (핵심 지표 + 실행 가능한 조언, 군더더기 X).
-- 조언 백엔드: **구독 Claude(`claude -p`)** 기본. API 키 백엔드는 추후 교체용.
+
+## 핵심 워크플로우 (중요)
+- 도구는 **지표 수집기**다. 사용자가 몇 판 하고 와서 "분석해줘" 하면:
+  1. `lol-jgl-agent --count N` 으로 최근 N판 지표를 `reports/history.json`에 **누적**(match_id 중복 제거).
+  2. **Claude Code(나)가 `reports/history.json` 전체를 읽고** 새 판 + 그동안 쌓인 데이터를 함께 보고 **채팅으로** 피드백. 여러 판 걸친 반복 습관을 짚는 게 핵심.
+- `claude -p` 자동 조언은 `--advice` 옵션으로만(부가). 메인은 채팅 피드백이라 OAuth 토큰 의존을 피한다.
+- 워처(`lol-jgl-watch`)는 새 경기를 자동 감지해 history에 조용히 적립만 한다.
 
 ## 개발 명령어
 ```powershell
 .\.venv\Scripts\Activate.ps1        # 가상환경 (Python 3.12, .venv)
 pip install -e ".[dev]"             # 개발 설치
 pytest                              # 테스트
-lol-jgl-agent --riot-id "이름#KR1"  # 실행
+lol-jgl-agent --count 5             # 최근 5판 수집 → history.json 누적
+lol-jgl-watch                       # 백그라운드 자동 적립
 ```
 - 파이썬은 반드시 `.venv`의 것을 사용. 전역 `python`은 MS Store 스텁이라 동작 안 함.
 - 비밀키는 `.env` (git 제외). 예시는 `.env.example`.
 
 ## 구조
-- `src/lol_jgl_agent/config.py` — 설정/상수 (동작함)
-- `riot/` — Riot API 클라이언트·모델 (M1)
-- `analysis/` — 정글 지표 계산: pathing·jungle·benchmarks (M2)
-- `advisor/` — 조언 생성: prompt·backend (backend 구독CLI는 구현됨)
-- `report/renderer.py` — 마크다운 리포트 (M3)
-- `cli.py` — 진입점 (동작함)
+- `src/lol_jgl_agent/config.py` — 설정/상수
+- `riot/` — Riot API 클라이언트·모델
+- `analysis/` — 정글 지표 계산: pathing·jungle·benchmarks
+- `pipeline.py` — 수집→지표(→조언) 로직 (CLI/워처 공용)
+- `history.py` — 지표 누적 저장소 (reports/history.json)
+- `advisor/` — `--advice` 옵션용 claude -p 조언 (부가)
+- `report/renderer.py` — `--advice` 시 마크다운 리포트
+- `cli.py` — 수집 진입점 · `watch.py` — 자동 적립 워처
 
 ## 마일스톤
 M0 세팅 ✅ → M1 데이터수집 → M2 지표엔진 → M3 조언+리포트 → M4 도그푸딩

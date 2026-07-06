@@ -1,39 +1,36 @@
-"""CLI 진입점 — 최근 랭크 1판을 분석해 지표·조언 리포트를 만든다.
+"""CLI 진입점 — 최근 랭크 N판 지표를 수집해 누적 히스토리에 쌓는다.
 
-사용법:
-    lol-jgl-agent --riot-id "이름#KR1"
-    lol-jgl-agent --no-advice
+피드백은 Claude Code 채팅으로 받는 것이 메인 워크플로우:
+    lol-jgl-agent --count 5      # 최근 5판 수집 → history.json 누적
+    → 이후 Claude에게 "분석해줘" 하면 누적 데이터로 피드백
+
+    lol-jgl-agent --count 1 --advice   # 구독 Claude(claude -p) 자동 조언까지
 """
 from __future__ import annotations
 
 import argparse
 import sys
 
+from . import history
 from .analysis.jungle import JungleMetrics
 from .config import Settings
-from .pipeline import analyze_match
+from .pipeline import analyze_match, collect_metrics, metrics_to_record
 from .riot.client import RiotApiError, RiotClient
 
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="lol-jgl-agent",
-        description="리그오브레전드 정글러 경기 후 피드백/조언",
+        description="리그오브레전드 정글러 지표 수집 (피드백은 Claude Code 채팅으로)",
     )
-    p.add_argument(
-        "--riot-id",
-        help="분석할 소환사 Riot ID (예: '이름#KR1'). 생략 시 .env의 DEFAULT_RIOT_ID.",
-    )
-    p.add_argument(
-        "--no-advice",
-        action="store_true",
-        help="Claude 조언 생성을 건너뛰고 지표 리포트만 저장.",
-    )
+    p.add_argument("--riot-id", help="Riot ID (예: '이름#KR1'). 생략 시 .env의 DEFAULT_RIOT_ID.")
+    p.add_argument("--count", type=int, default=3, help="수집할 최근 랭크 경기 수. 기본 3.")
+    p.add_argument("--advice", action="store_true",
+                   help="최신 경기에 대해 구독 Claude(claude -p) 자동 조언·리포트도 생성.")
     return p
 
 
 def main() -> None:
-    # Windows 콘솔에서 한글 출력 깨짐 방지
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
@@ -51,58 +48,45 @@ def main() -> None:
     try:
         with RiotClient(settings) as riot:
             puuid = riot.puuid_by_riot_id(riot_id)
-            match_ids = riot.recent_ranked_match_ids(puuid, count=1)
+            match_ids = riot.recent_ranked_match_ids(puuid, count=args.count)
             if not match_ids:
                 print(f"[!] {riot_id}의 최근 랭크 경기를 찾지 못했습니다.")
                 return
-            if not args.no_advice:
-                print("분석 및 조언 생성 중 (구독 Claude)...")
-            result = analyze_match(
-                settings, riot, riot_id=riot_id, puuid=puuid,
-                match_id=match_ids[0], no_advice=args.no_advice,
-            )
+            print(f"{len(match_ids)}판 수집 중...")
+            metrics = [collect_metrics(riot, puuid, mid) for mid in match_ids]
+            records = [metrics_to_record(m, mid) for m, mid in zip(metrics, match_ids)]
+
+            advice_result = None
+            if args.advice:
+                print("최신 경기 조언 생성 중 (구독 Claude)...")
+                advice_result = analyze_match(
+                    settings, riot, riot_id=riot_id, puuid=puuid, match_id=match_ids[0],
+                )
     except RiotApiError as e:
         print(f"[!] Riot API 오류: {e}")
         return
 
-    if result.metrics.position != "JUNGLE":
-        print("[!] 참고: 이 경기의 포지션은 정글이 아닙니다. 정글 지표는 참고용으로만 보세요.")
-    _print_metrics(riot_id, result.match_id, result.metrics)
+    added, total, _ = history.merge(records)
+    _print_table(riot_id, metrics, match_ids)
+    print(f"\n새로 {added}판 추가 · 누적 {total}판 → {history.HISTORY_PATH}")
+    print("Claude Code에게 \"분석해줘\" 라고 하면 누적 데이터로 피드백해 드립니다.")
 
-    if result.advice_error:
-        print(f"\n[!] 조언 생략: {result.advice_error}")
-    print(f"\n리포트 저장: {result.report_path}")
-    if result.advice:
-        print("\n=== 조언 ===")
-        print(result.advice)
-
-
-def _print_metrics(riot_id: str, match_id: str, m: JungleMetrics) -> None:
-    """정글 지표 요약 출력."""
-    r = "승리" if m.win else "패배"
-    print(f"■ {riot_id} — {m.champion} ({m.position})  {r}  ({m.duration_min}분)  match {match_id}")
-    print(f"  KDA {m.kills}/{m.deaths}/{m.assists}  킬관여율 {_pct(m.kill_participation)}")
-    print("  [성장]")
-    print(f"    CS@10 {m.cs_at_10}  CS@15 {m.cs_at_15}  분당CS {m.cs_per_min}  "
-          f"10분전정글CS {m.jungle_cs_before_10}")
-    print(f"    상대 정글러 대비 15분 골드차 {_signed(m.gold_diff_vs_enemy_jgl_at_15)}")
-    print("  [오브젝트]")
-    print(f"    드래곤 {m.dragon_takedowns}  전령 {m.rift_herald_takedowns}  바론 {m.baron_takedowns}"
-          f"  스폰30초내처치 {m.epic_kills_within_30s_of_spawn}  스틸 {m.epic_monster_steals}")
-    print("  [카정/시야]")
-    print(f"    적정글CS {m.enemy_jungle_cs}  카정차 {_signed(m.counter_jungle_diff)}"
-          f"  |  시야점수 {m.vision_score}  제어와드 {m.control_wards_placed}"
-          f"  설치 {m.wards_placed}  제거 {m.wards_killed}")
-    print("  [데스]")
-    print(f"    {m.deaths}회 @ {', '.join(f'{t}분' for t in m.death_minutes) or '없음'}")
+    if advice_result and advice_result.advice:
+        print("\n=== 최신 경기 조언 ===")
+        print(advice_result.advice)
+    elif advice_result and advice_result.advice_error:
+        print(f"\n[!] 조언 생략: {advice_result.advice_error}")
 
 
-def _pct(v: float | None) -> str:
-    return f"{v*100:.0f}%" if v is not None else "-"
-
-
-def _signed(v: float | None) -> str:
-    return "-" if v is None else (f"+{v}" if v > 0 else str(v))
+def _print_table(riot_id: str, metrics: list[JungleMetrics], match_ids: list[str]) -> None:
+    print(f"\n■ {riot_id} — 최근 {len(metrics)}판")
+    print(f"  {'챔피언':<10} {'결과':<4} {'시간':>5} {'KDA':>10} {'분당CS':>6} {'15분골드차':>9} {'데스':>4}")
+    for m in metrics:
+        kda = f"{m.kills}/{m.deaths}/{m.assists}"
+        gd = m.gold_diff_vs_enemy_jgl_at_15
+        gd_s = ("-" if gd is None else (f"+{gd}" if gd > 0 else str(gd)))
+        print(f"  {m.champion:<10} {'승' if m.win else '패':<4} {m.duration_min:>4}분 "
+              f"{kda:>10} {m.cs_per_min:>6} {gd_s:>9} {m.deaths:>4}")
 
 
 if __name__ == "__main__":
