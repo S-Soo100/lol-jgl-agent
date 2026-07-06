@@ -10,9 +10,10 @@ dist/
 # 환경변수 / 비밀키
 .env
 
-# 캐시 / 수집 데이터
+# 캐시 / 수집 데이터 / 생성 리포트
 .cache/
 data/
+reports/
 
 # Claude Code 개인 설정 (공유 설정은 .claude/settings.json)
 .claude/settings.local.json

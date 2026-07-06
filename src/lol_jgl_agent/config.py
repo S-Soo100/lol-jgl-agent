@@ -12,6 +12,7 @@ load_dotenv()
 # 경로
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CACHE_DIR = PROJECT_ROOT / ".cache"
+REPORTS_DIR = PROJECT_ROOT / "reports"
 
 # 소환사의 협곡 타임라인 좌표계 (Riot 좌표: 약 0 ~ 15000)
 MAP_MIN = 0

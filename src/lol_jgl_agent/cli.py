@@ -11,8 +11,10 @@ from __future__ import annotations
 import argparse
 import sys
 
+from .advisor.backend import AdvisorError, make_advisor
 from .analysis.jungle import JungleMetrics, compute_jungle_metrics
-from .config import Settings
+from .config import REPORTS_DIR, Settings
+from .report.renderer import render_markdown
 from .riot.client import RiotApiError, RiotClient
 
 
@@ -24,6 +26,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--riot-id",
         help="분석할 소환사 Riot ID (예: '이름#KR1'). 생략 시 .env의 DEFAULT_RIOT_ID.",
+    )
+    p.add_argument(
+        "--no-advice",
+        action="store_true",
+        help="Claude 조언 생성을 건너뛰고 지표 리포트만 저장.",
     )
     return p
 
@@ -64,6 +71,24 @@ def main() -> None:
     metrics = compute_jungle_metrics(match, timeline, puuid)
     _print_metrics(riot_id, match_id, metrics)
 
+    # 조언 생성 (구독 Claude). 실패해도 지표 리포트는 저장.
+    advice: str | None = None
+    if not args.no_advice:
+        try:
+            print("\n조언 생성 중 (구독 Claude)...")
+            advice = make_advisor(settings).generate_advice(metrics.model_dump_json())
+        except AdvisorError as e:
+            print(f"[!] 조언 생략: {e}")
+
+    md = render_markdown(metrics, advice, match_id=match_id, riot_id=riot_id)
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = REPORTS_DIR / f"{match_id}.md"
+    out_path.write_text(md, encoding="utf-8")
+    print(f"\n리포트 저장: {out_path}")
+    if advice:
+        print("\n=== 조언 ===")
+        print(advice)
+
 
 def _my_position(match: dict, puuid: str) -> str:
     for p in match["info"]["participants"]:
@@ -90,7 +115,6 @@ def _print_metrics(riot_id: str, match_id: str, m: JungleMetrics) -> None:
           f"  설치 {m.wards_placed}  제거 {m.wards_killed}")
     print("  [데스]")
     print(f"    {m.deaths}회 @ {', '.join(f'{t}분' for t in m.death_minutes) or '없음'}")
-    print("  (조언 생성은 M3에서 연결됩니다.)")
 
 
 def _pct(v: float | None) -> str:
