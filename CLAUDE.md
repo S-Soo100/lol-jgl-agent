@@ -19,6 +19,11 @@
 - `claude -p` 자동 조언은 `--advice` 옵션으로만(부가). 메인은 채팅 피드백이라 OAuth 토큰 의존을 피한다.
 - 워처(`lol-jgl-watch`)는 새 경기를 자동 감지해 history에 조용히 적립만 한다.
 
+## 피드백 루프 (전략 → 플레이 → 리뷰)
+- **전략 처방전**: `reports/strategy_<날짜>.md` — 세션 전에 목표(측정 가능)·추천 챔프·Do/Don't를 데이터 기반으로 처방.
+- **리뷰**: 세션 후 사용자가 "리뷰해줘" 하면, 가장 최근 `reports/strategy_*.md`의 목표와 새 경기 실제 지표를 비교해 달성 여부를 피드백한다.
+- 이 사용자의 핵심 레버·추천 챔프는 메모리 `lol-jgl-player-profile` 참고 (데스·드래곤이 승패, 자르반/비가 고승률).
+
 ## 개발 명령어
 ```powershell
 .\.venv\Scripts\Activate.ps1        # 가상환경 (Python 3.12, .venv)
