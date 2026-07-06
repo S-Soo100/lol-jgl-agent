@@ -97,9 +97,20 @@ class RiotClient:
         return self._get(url)["puuid"]
 
     def recent_ranked_match_ids(self, puuid: str, count: int = 1) -> list[str]:
-        """최근 랭크(솔로+자유) 매치 ID 목록. 최신순."""
+        """최근 랭크(솔로+자유) 매치 ID 목록. 최신순. 100판 초과 시 페이지네이션."""
         url = self._regional(f"/lol/match/v5/matches/by-puuid/{quote(puuid)}/ids")
-        return self._get(url, params={"type": "ranked", "start": 0, "count": count})
+        ids: list[str] = []
+        start = 0
+        while len(ids) < count:
+            batch = min(100, count - len(ids))
+            page = self._get(url, params={"type": "ranked", "start": start, "count": batch})
+            if not page:
+                break
+            ids.extend(page)
+            if len(page) < batch:
+                break
+            start += batch
+        return ids[:count]
 
     def match(self, match_id: str) -> dict:
         """매치 상세(결과) JSON. 로컬 캐시 우선."""

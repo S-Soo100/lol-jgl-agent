@@ -43,7 +43,8 @@ def render_markdown(m: JungleMetrics, advice: str | None, *, match_id: str, riot
     lines.append("")
 
     lines.append("## 오브젝트 & 카정")
-    lines.append(f"- 드래곤 **{m.dragon_takedowns}** · 전령 **{m.rift_herald_takedowns}** · 바론 **{m.baron_takedowns}**")
+    lines.append(f"- 드래곤 **{m.dragon_takedowns}** {_g('dragon_takedowns', m.dragon_takedowns)}"
+                 f" · 전령 **{m.rift_herald_takedowns}** · 바론 **{m.baron_takedowns}**")
     lines.append(f"- 스폰 30초 내 처치 {m.epic_kills_within_30s_of_spawn} · 스틸 {m.epic_monster_steals}")
     lines.append(f"- 적 정글 CS {m.enemy_jungle_cs} · 카정 차이 **{_signed(m.counter_jungle_diff)}**")
     lines.append("")
@@ -55,9 +56,10 @@ def render_markdown(m: JungleMetrics, advice: str | None, *, match_id: str, riot
 
     lines.append("## 데스")
     if m.death_minutes:
-        lines.append(f"- 총 **{m.deaths}회**: {', '.join(f'{t}분' for t in m.death_minutes)}")
+        lines.append(f"- 총 **{m.deaths}회** {_g('deaths', m.deaths)}: "
+                     f"{', '.join(f'{t}분' for t in m.death_minutes)}")
     else:
-        lines.append("- 데스 없음")
+        lines.append("- 데스 없음 🟢")
     lines.append("")
 
     lines.append("## 조언")
