@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from .analysis.jungle import JungleMetrics, compute_jungle_metrics
 from .config import Settings
 from .riot.client import RiotApiError, RiotClient
 
@@ -57,29 +58,47 @@ def main() -> None:
         print(f"[!] Riot API 오류: {e}")
         return
 
-    _print_collection_summary(riot_id, match_id, match, timeline, puuid)
+    if _my_position(match, puuid) != "JUNGLE":
+        print("[!] 참고: 이 경기의 포지션은 정글이 아닙니다. 정글 지표는 참고용으로만 보세요.")
+
+    metrics = compute_jungle_metrics(match, timeline, puuid)
+    _print_metrics(riot_id, match_id, metrics)
 
 
-def _print_collection_summary(
-    riot_id: str, match_id: str, match: dict, timeline: dict, puuid: str
-) -> None:
-    """M1 수집 검증용 요약 (지표 계산 전)."""
-    me = next(
-        (p for p in match["info"]["participants"] if p["puuid"] == puuid),
-        None,
-    )
-    frames = timeline["info"]["frames"]
-    print(f"수집 완료 — {riot_id}  (match {match_id})")
-    print(f"  경기 시간: {match['info']['gameDuration'] // 60}분, 큐: {match['info']['queueId']}")
-    print(f"  타임라인 프레임: {len(frames)}개")
-    if me:
-        cs = me["totalMinionsKilled"] + me["neutralMinionsKilled"]
-        print(
-            f"  나: {me['championName']} ({me['teamPosition']}) "
-            f"{me['kills']}/{me['deaths']}/{me['assists']}, CS {cs}, "
-            f"{'승리' if me['win'] else '패배'}"
-        )
-    print("  (지표 분석은 M2, 조언은 M3에서 연결됩니다.)")
+def _my_position(match: dict, puuid: str) -> str:
+    for p in match["info"]["participants"]:
+        if p["puuid"] == puuid:
+            return p["teamPosition"]
+    return ""
+
+
+def _print_metrics(riot_id: str, match_id: str, m: JungleMetrics) -> None:
+    """정글 지표 요약 출력 (M2). 서식 있는 리포트/조언은 M3."""
+    r = "승리" if m.win else "패배"
+    print(f"■ {riot_id} — {m.champion} ({m.position})  {r}  ({m.duration_min}분)  match {match_id}")
+    print(f"  KDA {m.kills}/{m.deaths}/{m.assists}  킬관여율 {_pct(m.kill_participation)}")
+    print("  [성장]")
+    print(f"    CS@10 {m.cs_at_10}  CS@15 {m.cs_at_15}  분당CS {m.cs_per_min}  "
+          f"10분전정글CS {m.jungle_cs_before_10}")
+    print(f"    상대 정글러 대비 15분 골드차 {_signed(m.gold_diff_vs_enemy_jgl_at_15)}")
+    print("  [오브젝트]")
+    print(f"    드래곤 {m.dragon_takedowns}  전령 {m.rift_herald_takedowns}  바론 {m.baron_takedowns}"
+          f"  스폰30초내처치 {m.epic_kills_within_30s_of_spawn}  스틸 {m.epic_monster_steals}")
+    print("  [카정/시야]")
+    print(f"    적정글CS {m.enemy_jungle_cs}  카정차 {_signed(m.counter_jungle_diff)}"
+          f"  |  시야점수 {m.vision_score}  제어와드 {m.control_wards_placed}"
+          f"  설치 {m.wards_placed}  제거 {m.wards_killed}")
+    print("  [데스]")
+    print(f"    {m.deaths}회 @ {', '.join(f'{t}분' for t in m.death_minutes) or '없음'}")
+    print("  (조언 생성은 M3에서 연결됩니다.)")
+
+
+def _pct(v: float | None) -> str:
+    return f"{v*100:.0f}%" if v is not None else "-"
+
+
+def _signed(v: float | None) -> str:
+    return "-" if v is None else (f"+{v}" if v > 0 else str(v))
 
 
 if __name__ == "__main__":
