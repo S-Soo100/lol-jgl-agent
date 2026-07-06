@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# 환경변수 / 비밀키
+.env
+
+# 캐시 / 수집 데이터
+.cache/
+data/
+
+# Claude Code 개인 설정 (공유 설정은 .claude/settings.json)
+.claude/settings.local.json
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db

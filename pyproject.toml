@@ -1,0 +1,26 @@
+[project]
+name = "lol-jgl-agent"
+version = "0.1.0"
+description = "리그오브레전드 정글러 경기 후 피드백/조언 도구"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.7",
+    "python-dotenv>=1.0",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+viz = ["matplotlib>=3.8", "Pillow>=10.0"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+lol-jgl-agent = "lol_jgl_agent.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lol_jgl_agent"]
