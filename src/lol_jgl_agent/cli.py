@@ -1,20 +1,17 @@
-"""CLI 진입점.
+"""CLI 진입점 — 최근 랭크 1판을 분석해 지표·조언 리포트를 만든다.
 
 사용법:
     lol-jgl-agent --riot-id "이름#KR1"
-
-현재(M1): 최근 랭크 1판을 Riot API로 받아 캐시하고, 수집 결과를 요약 출력.
-지표 계산(M2)·조언(M3)은 이후 단계에서 연결한다.
+    lol-jgl-agent --no-advice
 """
 from __future__ import annotations
 
 import argparse
 import sys
 
-from .advisor.backend import AdvisorError, make_advisor
-from .analysis.jungle import JungleMetrics, compute_jungle_metrics
-from .config import REPORTS_DIR, Settings
-from .report.renderer import render_markdown
+from .analysis.jungle import JungleMetrics
+from .config import Settings
+from .pipeline import analyze_match
 from .riot.client import RiotApiError, RiotClient
 
 
@@ -58,47 +55,30 @@ def main() -> None:
             if not match_ids:
                 print(f"[!] {riot_id}의 최근 랭크 경기를 찾지 못했습니다.")
                 return
-            match_id = match_ids[0]
-            match = riot.match(match_id)
-            timeline = riot.timeline(match_id)
+            if not args.no_advice:
+                print("분석 및 조언 생성 중 (구독 Claude)...")
+            result = analyze_match(
+                settings, riot, riot_id=riot_id, puuid=puuid,
+                match_id=match_ids[0], no_advice=args.no_advice,
+            )
     except RiotApiError as e:
         print(f"[!] Riot API 오류: {e}")
         return
 
-    if _my_position(match, puuid) != "JUNGLE":
+    if result.metrics.position != "JUNGLE":
         print("[!] 참고: 이 경기의 포지션은 정글이 아닙니다. 정글 지표는 참고용으로만 보세요.")
+    _print_metrics(riot_id, result.match_id, result.metrics)
 
-    metrics = compute_jungle_metrics(match, timeline, puuid)
-    _print_metrics(riot_id, match_id, metrics)
-
-    # 조언 생성 (구독 Claude). 실패해도 지표 리포트는 저장.
-    advice: str | None = None
-    if not args.no_advice:
-        try:
-            print("\n조언 생성 중 (구독 Claude)...")
-            advice = make_advisor(settings).generate_advice(metrics.model_dump_json())
-        except AdvisorError as e:
-            print(f"[!] 조언 생략: {e}")
-
-    md = render_markdown(metrics, advice, match_id=match_id, riot_id=riot_id)
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = REPORTS_DIR / f"{match_id}.md"
-    out_path.write_text(md, encoding="utf-8")
-    print(f"\n리포트 저장: {out_path}")
-    if advice:
+    if result.advice_error:
+        print(f"\n[!] 조언 생략: {result.advice_error}")
+    print(f"\n리포트 저장: {result.report_path}")
+    if result.advice:
         print("\n=== 조언 ===")
-        print(advice)
-
-
-def _my_position(match: dict, puuid: str) -> str:
-    for p in match["info"]["participants"]:
-        if p["puuid"] == puuid:
-            return p["teamPosition"]
-    return ""
+        print(result.advice)
 
 
 def _print_metrics(riot_id: str, match_id: str, m: JungleMetrics) -> None:
-    """정글 지표 요약 출력 (M2). 서식 있는 리포트/조언은 M3."""
+    """정글 지표 요약 출력."""
     r = "승리" if m.win else "패배"
     print(f"■ {riot_id} — {m.champion} ({m.position})  {r}  ({m.duration_min}분)  match {match_id}")
     print(f"  KDA {m.kills}/{m.deaths}/{m.assists}  킬관여율 {_pct(m.kill_participation)}")

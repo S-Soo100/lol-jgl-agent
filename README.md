@@ -23,10 +23,15 @@ pip install -e ".[dev]"
 copy .env.example .env
 #   -> .env 를 열어 RIOT_API_KEY, DEFAULT_RIOT_ID 입력
 
-# 4) 실행 (스켈레톤)
+# 4) 실행 — 최근 랭크 1판 분석
 lol-jgl-agent --riot-id "이름#KR1"
+lol-jgl-agent --no-advice          # 조언 없이 지표만
 
-# 5) 테스트
+# 5) 자동 감시 — 켜두면 게임 끝날 때마다 자동 리포트
+lol-jgl-watch                      # 30초 간격 폴링, 새 경기 감지 시 리포트 열림
+lol-jgl-watch --interval 20 --no-open
+
+# 6) 테스트
 pytest
 ```
 
@@ -36,7 +41,9 @@ pytest
 - [x] **M1** — Riot API 데이터 수집 (Match + Timeline)
 - [x] **M2** — 정글 지표 계산 엔진
 - [x] **M3** — 조언 생성 + 마크다운 리포트 (조언은 claude CLI 인증 필요)
+- [x] **자동 감시 (Level 1 폴링)** — `lol-jgl-watch`로 새 경기 자동 감지·리포트
 - [ ] **M4** — 실경기 도그푸딩
+- [ ] **자동 감시 Level 2/3** — LCU 연동으로 종료 즉시 감지
 
 ## 조언 생성 인증 (1회)
 
