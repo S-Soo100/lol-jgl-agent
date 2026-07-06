@@ -33,10 +33,18 @@ pytest
 ## 진행 상태 (마일스톤)
 
 - [x] **M0** — 환경/저장소 세팅, 프로젝트 스캐폴딩
-- [ ] **M1** — Riot API 데이터 수집 (Match + Timeline)
-- [ ] **M2** — 정글 지표 계산 엔진
-- [ ] **M3** — 조언 생성 + 마크다운 리포트
+- [x] **M1** — Riot API 데이터 수집 (Match + Timeline)
+- [x] **M2** — 정글 지표 계산 엔진
+- [x] **M3** — 조언 생성 + 마크다운 리포트 (조언은 claude CLI 인증 필요)
 - [ ] **M4** — 실경기 도그푸딩
+
+## 조언 생성 인증 (1회)
+
+조언은 구독 Claude(claude CLI)로 생성한다. 헤드리스 인증을 1회 설정해야 한다:
+```powershell
+& "$env:APPDATA\Claude\claude-code\<버전>\claude.exe" setup-token
+```
+설정 후 `lol-jgl-agent` 실행 시 조언이 리포트에 포함된다. 미인증이면 지표 리포트만 저장된다(`--no-advice`와 동일).
 
 ## 구조
 
