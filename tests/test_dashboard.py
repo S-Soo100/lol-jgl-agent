@@ -41,6 +41,14 @@ def test_game_feed_per_game_capped():
     # 게임 카드 존재 + 발견 줄 수 상한
     assert '<div class="gcard">' in html
     assert html.count('<div class="fl">') <= FEED_FINDINGS
+
+
+def test_game_card_has_phase_detail():
+    # 각 게임 카드에 초반/후반 역할 펼치기(<details>, JS 없이)
+    html = render_dashboard([_rec()])
+    assert "<details>" in html
+    assert "역할 상세" in html
+    assert "초반 (≤15분)" in html and "후반 (25분+)" in html
     # 테마 대응
     assert "prefers-color-scheme:dark" in html
 

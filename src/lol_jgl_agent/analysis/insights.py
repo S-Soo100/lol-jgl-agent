@@ -152,6 +152,75 @@ def summarize_recent(records: list[dict], n: int = 5) -> list[Finding]:
     return f
 
 
+@dataclass
+class Phase:
+    """한 게임의 초반/후반 역할 분류 + 정석 포인터."""
+
+    name: str      # "초반 (≤15분)" / "후반 (25분+)"
+    severity: str  # good|warn|bad|info
+    role: str      # "말림 (갱형)" 등
+    stats: str     # 핵심 지표 한 줄
+    tip: str = ""  # "정석: ... → [03]"
+
+
+def _signed(v) -> str:
+    if v is None:
+        return "-"
+    return f"+{v}" if v > 0 else str(v)
+
+
+def phase_breakdown(rec: dict) -> list[Phase]:
+    """초반(≤15분)·후반(25분+) 역할을 지표로 결정론 분류. [early, late] 반환.
+
+    맥락 있는 "이 판은 이렇게 했어야" 코칭은 채팅(Tier 2)의 몫이고,
+    여기서는 지표로 판별 가능한 역할 + knowledge/principles 포인터만 준다.
+    """
+    dur = rec.get("duration_min") or 0.0
+    dmins = rec.get("death_minutes") or []
+    tdmins = rec.get("takedown_minutes") or []
+    gd15 = rec.get("gold_diff_vs_enemy_jgl_at_15")
+    cs10 = rec.get("cs_at_10")
+    won = bool(rec.get("win"))
+    baron = rec.get("baron_takedowns", 0)
+
+    # --- 초반 (≤15분) ---
+    early_d = [t for t in dmins if t < EARLY_WINDOW_MIN]
+    td15 = [t for t in tdmins if t < 15]
+    style = "갱형" if len(td15) >= 5 else ("파밍형" if (cs10 or 0) >= 55 else "")
+    suffix = f" ({style})" if style else ""
+    e_stats = (f"CS@10 {cs10 if cs10 is not None else '-'} · "
+               f"초반 데스 {len(early_d)} · 15분 골드 {_signed(gd15)}")
+    if len(early_d) >= EARLY_DEATH_BAD or (gd15 is not None and gd15 <= -1500):
+        early = Phase("초반 (≤15분)", "bad" if len(early_d) >= EARLY_DEATH_BAD else "warn",
+                      "말림" + suffix, e_stats,
+                      "정석: 밀리면 파밍·시야로 버티고 무리한 교전 금지 → [03]")
+    elif len(early_d) <= 1 and (gd15 is None or gd15 >= 0):
+        early = Phase("초반 (≤15분)", "good", "안정" + suffix, e_stats,
+                      "정석: 좋은 초반 — 리드는 오브젝트로 환전 → [04]")
+    else:
+        early = Phase("초반 (≤15분)", "warn", "기복" + suffix, e_stats,
+                      "정석: 6렙 전 무리한 갱 자제, 각 없으면 파밍 → [01][02]")
+
+    # --- 후반 (25분+) ---
+    if dur <= 25:
+        late = Phase("후반 (25분+)", "good" if won else "info",
+                     "빠른 종료" if won else "단기전", f"{dur}분 종료",
+                     "정석: 리드 빠른 환전 성공 → [04]" if won else "")
+    else:
+        late_d = [t for t in dmins if t >= 25]
+        l_stats = f"바론 {baron} · 25분+ 데스 {len(late_d)} · {dur}분"
+        if gd15 is not None and gd15 >= BIG_LEAD_GOLD and not won:
+            late = Phase("후반 (25분+)", "bad", "리드 못 굴림", l_stats,
+                         "정석: 15~25분 타워를 목표로 닫기 → [04]")
+        elif len(late_d) >= 3:
+            late = Phase("후반 (25분+)", "warn", "후반 짤림", l_stats,
+                         "정석: 25분+ '사냥꾼→문지기', 혼자 짤리지 말 것 → [03]")
+        else:
+            late = Phase("후반 (25분+)", "good" if won else "info", "무난", l_stats, "")
+
+    return [early, late]
+
+
 def render_findings(findings: list[Finding]) -> str:
     """발견 목록을 심각도순(bad→warn→good→info) 텍스트로 렌더링."""
     lines = []

@@ -2,6 +2,7 @@
 from lol_jgl_agent.analysis.insights import (
     Finding,
     analyze_game,
+    phase_breakdown,
     render_findings,
     summarize_recent,
 )
@@ -98,6 +99,26 @@ def test_summarize_recent():
     cats = _cats(summarize_recent(recs))
     assert "record" in cats
     assert cats["dragons"].severity == "good"  # 전판 드래곤 목표 달성
+
+
+def test_phase_early_stable_late_fast_close():
+    # 초반 무사 + 골드 앞섬 → 안정 / 22분 승 → 빠른 종료
+    early, late = phase_breakdown(_base(win=True, duration_min=22.0,
+                                        death_minutes=[16.0], gold_diff_vs_enemy_jgl_at_15=946))
+    assert early.severity == "good" and "안정" in early.role
+    assert late.severity == "good" and "빠른 종료" in late.role
+
+
+def test_phase_early_behind_late_unconverted():
+    # 초반 데스 2 + 큰 골드 열세 → 말림 / +2834 38분 패 → 리드 못 굴림
+    early, _ = phase_breakdown(_base(death_minutes=[6.0, 8.0, 20.0],
+                                     gold_diff_vs_enemy_jgl_at_15=-1800))
+    assert early.severity in ("warn", "bad") and "말림" in early.role
+    _, late = phase_breakdown(_base(win=False, duration_min=38.6,
+                                    gold_diff_vs_enemy_jgl_at_15=2834,
+                                    death_minutes=[24.0, 30.0]))
+    assert late.severity == "bad" and "리드 못 굴림" in late.role
+    assert "[04]" in late.tip
 
 
 def test_render_sorts_bad_first():

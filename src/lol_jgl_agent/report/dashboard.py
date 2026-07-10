@@ -9,7 +9,7 @@ from __future__ import annotations
 from html import escape
 from pathlib import Path
 
-from ..analysis.insights import _SEVERITY_ORDER, DRAGON_GOAL, analyze_game
+from ..analysis.insights import _SEVERITY_ORDER, DRAGON_GOAL, analyze_game, phase_breakdown
 
 MAX_TREND_GAMES = 16  # 추세 차트에 표시할 최근 경기 수
 GAME_FEED_LIMIT = 12  # 게임별 피드백 카드로 보여줄 최근 경기 수
@@ -74,6 +74,12 @@ th{color:var(--muted);font-weight:600;font-size:11px}
 .ghead .win{color:var(--win);font-weight:700}
 .ghead .loss{color:var(--loss);font-weight:700}
 .fl{font-size:12px;padding:2px 0;line-height:1.4}
+.gcard details{margin-top:8px}
+.gcard summary{cursor:pointer;color:var(--ink2);font-size:12px}
+.ph{margin:7px 0}
+.ph b{font-size:12px}
+.phs{color:var(--ink2);font-size:11px;margin:1px 0 0 17px}
+.phtip{color:var(--muted);font-size:11px;margin-left:17px}
 """
 
 _SEV_CLASS = {"good": "d-good", "warn": "d-warn", "bad": "d-bad", "info": "d-info"}
@@ -195,10 +201,18 @@ def _game_feed(records: list[dict]) -> str:
             f'{f" <span class=\"det\">— {escape(f.detail)}</span>" if f.detail else ""}</div>'
             for f in findings
         )
+        detail = "".join(
+            f'<div class="ph"><span class="dot {_SEV_CLASS.get(p.severity, "d-info")}"></span>'
+            f'<b>{escape(p.name)}: {escape(p.role)}</b>'
+            f'<div class="phs">{escape(p.stats)}</div>'
+            f'{f"<div class=\"phtip\">{escape(p.tip)}</div>" if p.tip else ""}</div>'
+            for p in phase_breakdown(r)
+        )
         cards.append(
             f'<div class="gcard"><div class="ghead">'
             f'<span class="{rescls}">{champ} {res}</span> '
-            f'<span class="det">{r.get("duration_min")}분 · KDA {kda}</span></div>{lines}</div>'
+            f'<span class="det">{r.get("duration_min")}분 · KDA {kda}</span></div>{lines}'
+            f'<details><summary>역할 상세 (초반/후반)</summary>{detail}</details></div>'
         )
     return "".join(cards)
 
@@ -269,7 +283,8 @@ def render_dashboard(records: list[dict], *, riot_id: str = "", subtitle: str = 
         f'<div class="card"><h2>챔프별 성적</h2>{_champ_table(records)}</div>'
         f'<div class="card"><h2>게임별 피드백 (최근 {min(len(records), GAME_FEED_LIMIT)}판)</h2>'
         f'<div class="gfeed">{_game_feed(records)}</div>'
-        f'<div class="sub" style="margin-top:10px">규칙 기반 자동 진단(LLM 없음). 깊은 코칭은 Claude에게 "리뷰해줘".</div></div>'
+        f'<div class="sub" style="margin-top:10px">규칙 기반 자동 진단(LLM 없음) · "역할 상세"에 초반/후반 역할+정석. '
+        f'정석 참고: [01]기본기 [02]맵읽기 [03]시팅 [04]중반. 맥락 코칭은 Claude에게 "리뷰해줘".</div></div>'
         f'{updscript}'
     )
     return _page(title, subtitle, body)
