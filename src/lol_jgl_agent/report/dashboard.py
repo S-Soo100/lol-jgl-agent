@@ -12,6 +12,8 @@ from pathlib import Path
 from ..analysis.insights import _SEVERITY_ORDER, DRAGON_GOAL, analyze_game
 
 MAX_TREND_GAMES = 16  # 추세 차트에 표시할 최근 경기 수
+GAME_FEED_LIMIT = 12  # 게임별 피드백 카드로 보여줄 최근 경기 수
+FEED_FINDINGS = 4     # 게임당 최대 발견 줄 수 (헤더 1줄 + 이것 = ≤5줄)
 DEATH_GOAL = 5
 
 # 상태색(고정) + 승/패 카테고리(테마별). 팔레트 references/palette.md 준거.
@@ -66,6 +68,12 @@ th{color:var(--muted);font-weight:600;font-size:11px}
 .updbar input{width:56px;padding:5px 7px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);font-size:13px}
 .updbar button{padding:7px 16px;border:0;border-radius:8px;background:var(--win);color:#fff;font-size:13px;font-weight:600;cursor:pointer}
 .updbar button:disabled{opacity:.55;cursor:default}
+.gfeed{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.gcard{border:1px solid var(--border);border-radius:10px;padding:11px 13px}
+.ghead{font-size:13px;margin-bottom:6px}
+.ghead .win{color:var(--win);font-weight:700}
+.ghead .loss{color:var(--loss);font-weight:700}
+.fl{font-size:12px;padding:2px 0;line-height:1.4}
 """
 
 _SEV_CLASS = {"good": "d-good", "warn": "d-warn", "bad": "d-bad", "info": "d-info"}
@@ -171,14 +179,28 @@ def _champ_table(records: list[dict]) -> str:
     return f"<table>{head}{''.join(rows)}</table>"
 
 
-def _findings_list(rec: dict) -> str:
-    findings = sorted(analyze_game(rec), key=lambda f: _SEVERITY_ORDER.get(f.severity, 9))
-    items = []
-    for f in findings:
-        cls = _SEV_CLASS.get(f.severity, "d-info")
-        det = f' <span class="det">— {escape(f.detail)}</span>' if f.detail else ""
-        items.append(f'<li><span class="dot {cls}"></span>{escape(f.title)}{det}</li>')
-    return f'<ul class="finds">{"".join(items)}</ul>'
+def _game_feed(records: list[dict]) -> str:
+    """최근 경기별로 헤더 1줄 + 규칙 발견 ≤4줄(총 ≤5줄) 카드를 렌더."""
+    cards = []
+    for r in records[:GAME_FEED_LIMIT]:
+        champ = escape(r.get("champion", "?"))
+        rescls = "win" if r.get("win") else "loss"
+        res = "승" if r.get("win") else "패"
+        kda = f"{r.get('kills', 0)}/{r.get('deaths', 0)}/{r.get('assists', 0)}"
+        findings = sorted(analyze_game(r),
+                          key=lambda f: _SEVERITY_ORDER.get(f.severity, 9))[:FEED_FINDINGS]
+        lines = "".join(
+            f'<div class="fl"><span class="dot {_SEV_CLASS.get(f.severity, "d-info")}"></span>'
+            f'{escape(f.title)}'
+            f'{f" <span class=\"det\">— {escape(f.detail)}</span>" if f.detail else ""}</div>'
+            for f in findings
+        )
+        cards.append(
+            f'<div class="gcard"><div class="ghead">'
+            f'<span class="{rescls}">{champ} {res}</span> '
+            f'<span class="det">{r.get("duration_min")}분 · KDA {kda}</span></div>{lines}</div>'
+        )
+    return "".join(cards)
 
 
 def _update_widgets(update_url: str | None) -> tuple[str, str]:
@@ -245,8 +267,9 @@ def render_dashboard(records: list[dict], *, riot_id: str = "", subtitle: str = 
         f'<div class="chart">{_signed_bars(lead)}</div>'
         f'<div class="sub">양수 막대인데 <b>패(빨강)</b> = 리드 못 굴린 판. 낮은 막대라도 <b>승(파랑)</b>이면 잘 굴린 판.</div></div>'
         f'<div class="card"><h2>챔프별 성적</h2>{_champ_table(records)}</div>'
-        f'<div class="card"><h2>최신 경기 자동 분석 — {escape(records[0].get("champion", "?"))} '
-        f'{"승" if records[0].get("win") else "패"}</h2>{_findings_list(records[0])}</div>'
+        f'<div class="card"><h2>게임별 피드백 (최근 {min(len(records), GAME_FEED_LIMIT)}판)</h2>'
+        f'<div class="gfeed">{_game_feed(records)}</div>'
+        f'<div class="sub" style="margin-top:10px">규칙 기반 자동 진단(LLM 없음). 깊은 코칭은 Claude에게 "리뷰해줘".</div></div>'
         f'{updscript}'
     )
     return _page(title, subtitle, body)

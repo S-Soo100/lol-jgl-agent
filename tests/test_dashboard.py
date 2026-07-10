@@ -26,10 +26,21 @@ def test_renders_sections_and_selfcontained():
     assert "http://" not in html and "https://" not in html
     assert "<script" not in html  # 런타임 JS 없음
     # 핵심 섹션
-    for token in ("요약", "데스 추세", "드래곤 추세", "리드 환전", "챔프별 성적", "자동 분석"):
+    for token in ("요약", "데스 추세", "드래곤 추세", "리드 환전", "챔프별 성적", "게임별 피드백"):
         assert token in html
     # 챔프명 노출
     assert "Sylas" in html and "JarvanIV" in html
+
+
+def test_game_feed_per_game_capped():
+    # 각 게임 카드는 헤더 1줄 + 발견 ≤4줄 (총 ≤5줄)
+    from lol_jgl_agent.report.dashboard import FEED_FINDINGS
+    recs = [_rec(champion="Vi", win=False, deaths=9,
+                 death_minutes=[6.5, 8.8, 12.7], dragon_takedowns=1)]
+    html = render_dashboard(recs)
+    # 게임 카드 존재 + 발견 줄 수 상한
+    assert '<div class="gcard">' in html
+    assert html.count('<div class="fl">') <= FEED_FINDINGS
     # 테마 대응
     assert "prefers-color-scheme:dark" in html
 
