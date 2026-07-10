@@ -29,6 +29,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="최신 경기에 대해 구독 Claude(claude -p) 자동 조언·리포트도 생성.")
     p.add_argument("--insights", action="store_true",
                    help="수집한 최신 경기 + 최근 추세를 규칙 기반으로 자동 분석(LLM 없이) 출력.")
+    p.add_argument("--dashboard", action="store_true",
+                   help="누적 히스토리를 자체완결 HTML 대시보드(reports/dashboard.html)로 생성.")
     return p
 
 
@@ -76,6 +78,9 @@ def main() -> None:
     if args.insights and records:
         _print_insights(records[0])
 
+    if args.dashboard:
+        _write_dashboard(riot_id)
+
     if advice_result and advice_result.advice:
         print("\n=== 최신 경기 조언 ===")
         print(advice_result.advice)
@@ -96,6 +101,17 @@ def _print_insights(newest: dict) -> None:
     if recent:
         print("\n[최근 추세]")
         print(render_findings(recent))
+
+
+def _write_dashboard(riot_id: str) -> None:
+    """누적 히스토리를 HTML 대시보드로 저장."""
+    from .config import REPORTS_DIR
+    from .report.dashboard import write_dashboard
+
+    path = write_dashboard(history.load_history(), REPORTS_DIR / "dashboard.html",
+                           riot_id=riot_id)
+    print(f"\n대시보드 생성: {path}")
+    print("  브라우저로 열면 LLM 호출 없이 기본 피드백을 볼 수 있어요.")
 
 
 def _print_table(riot_id: str, metrics: list[JungleMetrics], match_ids: list[str]) -> None:

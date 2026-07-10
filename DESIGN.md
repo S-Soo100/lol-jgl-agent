@@ -89,8 +89,9 @@ lol-jgl-agent/
         # - SubscriptionAdvisor: `claude -p` CLI 호출 (구독 Claude, MVP/테스트)
         # - ApiAdvisor: anthropic SDK + API 키 (추후/배포용)
     report/
-      renderer.py           # Markdown/HTML 리포트 렌더링
-    cli.py                  # 진입점
+      renderer.py           # Markdown 리포트 렌더링 (--advice)
+      dashboard.py          # 자체완결 HTML 대시보드 (--dashboard, LLM 0)
+    cli.py                  # 진입점 (--insights / --dashboard)
   tests/
 ```
 
@@ -101,7 +102,7 @@ lol-jgl-agent/
 1. **수집기 + 채팅 피드백 (현재)**: `--count N`으로 지표를 `history.json`에 누적,
    Claude Code 채팅으로 정성 피드백. (§7 참조 — 초기 "LLM 리포트 MVP"에서 피벗)
 2. **② 규칙 엔진 (완료)**: `analysis/insights.py` — LLM 없이 검증된 코칭을 자동 적용.
-3. **③ 대시보드**: `history.json` + insights → 자체완결 HTML 시각화 (LLM 0).
+3. **③ 대시보드 (완료)**: `report/dashboard.py` — history+insights → 자체완결 HTML (LLM 0).
 4. **① 지식베이스**: 정글 강의 유튜브 자막 → 정제 원리 `knowledge/` → 룰·채팅 강화.
 5. **자동화/실시간**: LCU 자동 감지, Live Client 오버레이 코칭.
 
@@ -148,10 +149,12 @@ Layer 2+ 채팅 코칭          Claude Code가 history 읽고 정성·맥락 피
 - CLI: `lol-jgl-agent --count N --insights` (opt-in). `render_findings`가 심각도순 출력.
 - **한계:** 정량 패턴만. "왜 한타를 졌나" 같은 정성/맥락은 Tier 2(채팅)의 몫.
 
-### 7.2 대시보드 (③, 예정)
-- `history.json` + `insights` 출력 → 정적 HTML 1파일(자체완결, 외부 요청 0).
-- 요소: 데스/드래곤 추세, 챔프별 승률, 리드 환전(골드@15 vs 결과·시간), 처방전 목표
-  스코어카드, 발견 목록. 런타임 LLM 호출 없이 기본 피드백 제공.
+### 7.2 대시보드 (③, 완료) — `report/dashboard.py`
+- `history.json` + `insights` → 정적 HTML 1파일(자체완결, 인라인 SVG, 외부 요청·런타임 JS 0).
+- 요소: 요약 타일(승률·목표 달성률), 데스/드래곤 추세 막대(목표선), **리드 환전**
+  (골드@15 부호 막대, 색=승/패), 챔프별 성적 표, 최신 경기 발견 목록.
+- 색은 검증된 팔레트(상태 good/warn/bad + 승/패 카테고리), 값 라벨 병기로 색 단독 인코딩
+  회피, `prefers-color-scheme`로 라이트/다크 대응. CLI: `--dashboard` → `reports/dashboard.html`.
 
 ### 7.3 지식베이스 (①, 예정)
 - `youtube-transcript-api`로 자막 수집 → Claude가 1회 정제 → `knowledge/*.md` 원리 파일.
