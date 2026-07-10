@@ -20,6 +20,15 @@
 - `raw/` — 추출한 자막 원문. **gitignore(로컬 전용, 저작권·용량).**
 - `principles/` — 증류된 정글 원리(우리 자산). 커밋 대상.
 
+## 원리 색인 (principles/)
+정글 VOD 코칭 3편에서 증류. 각 파일 끝에 **이 플레이어에게 적용** 절이 있음.
+- [01 정글 기본기](principles/01-jungle-fundamentals.md) — 풀캠·1.5캠 루틴·파밍 중 맵읽기·카메라 단축키·렌즈
+- [02 맵읽기 & 상대 정글러](principles/02-reading-map-and-enemy-jungler.md) — 우리팀 라인 우선·상대 예측·조우 3분기점·교전형vs성장형·주도권
+- [03 유리한 라인 굴리기 & 시팅](principles/03-snowball-and-sitting.md) — 따라오게 하기·시팅(뒤봐주기)·역갱·지는 라인 버리기·턴 반대편
+- [04 중반 15~25분 굴리기](principles/04-midgame-closing-15-25.md) — 뇌정지 구간·타워 목표·유리/불리 운영·10분 후 바텀
+
+출처 영상: [7BGt25QW2UQ](https://youtu.be/7BGt25QW2UQ) · [3b1QJ6pShBA](https://youtu.be/3b1QJ6pShBA) · [DpZIBN3St9I](https://youtu.be/DpZIBN3St9I)
+
 ## 주의
 - 자막 있는 영상만. 자동자막은 품질 편차 있어 증류(LLM 1회)가 필요.
 - 유튜브가 데이터센터 IP를 차단 → 로컬(가정 IP)에서 추출.
