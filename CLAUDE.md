@@ -48,10 +48,13 @@ lol-jgl-watch                       # 백그라운드 자동 적립
 ## 2단계 피드백 구조
 - **Tier 1 (LLM 없음):** `analysis/insights.py` 규칙 엔진 — 검증된 코칭(데스·초반과욕·드래곤·리드환전·불리할때과욕·챔프적합성·함정지표)을 결정론 규칙으로 적용. `--insights`로 즉시 출력. 정량 패턴만.
 - **Tier 2 (채팅):** Claude Code가 history 읽고 정성·맥락 코칭. insights의 상위 계층.
-- 로드맵: ②룰엔진(완료) → ③HTML 대시보드(완료) → ①유튜브 지식(knowledge/, 룰·채팅 강화).
+- 로드맵: ②룰엔진(완료) → ③HTML 대시보드(완료) → ①유튜브 지식(진행).
+- **① 지식베이스:** 정글 강의 자막은 **글로벌 스킬 `youtube-transcript`**로 추출(`~/.claude/skills/`, 범용).
+  `pip install -e ".[knowledge]"` 후 스킬 스크립트로 `knowledge/raw/<id>.md`(gitignore) 저장 →
+  채팅으로 `knowledge/principles/<주제>.md` 증류. 자세한 절차는 `knowledge/README.md`.
 
 ## 마일스톤
-M0 세팅 ✅ → M1 데이터수집 → M2 지표엔진 → M3 조언+리포트 → M4 도그푸딩 → **M5 규칙 엔진(insights) ✅** → **M6 대시보드(dashboard) ✅** → M7 지식베이스
+M0 세팅 ✅ → M1 데이터수집 → M2 지표엔진 → M3 조언+리포트 → M4 도그푸딩 → **M5 규칙 엔진(insights) ✅** → **M6 대시보드(dashboard) ✅** → **M7 지식베이스(knowledge/, 진행)**
 
 ## 작업 원칙
 - 전역 스킬 **karpathy-guidelines**를 따른다: 가정은 명시하고, 최소 코드로, 외과적 변경, 검증 가능한 목표.

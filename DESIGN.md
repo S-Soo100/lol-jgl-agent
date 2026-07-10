@@ -103,7 +103,7 @@ lol-jgl-agent/
    Claude Code 채팅으로 정성 피드백. (§7 참조 — 초기 "LLM 리포트 MVP"에서 피벗)
 2. **② 규칙 엔진 (완료)**: `analysis/insights.py` — LLM 없이 검증된 코칭을 자동 적용.
 3. **③ 대시보드 (완료)**: `report/dashboard.py` — history+insights → 자체완결 HTML (LLM 0).
-4. **① 지식베이스**: 정글 강의 유튜브 자막 → 정제 원리 `knowledge/` → 룰·채팅 강화.
+4. **① 지식베이스 (진행)**: 글로벌 스킬 `youtube-transcript`로 자막 추출 → `knowledge/principles/` 증류 → 룰·채팅 강화.
 5. **자동화/실시간**: LCU 자동 감지, Live Client 오버레이 코칭.
 
 ---
@@ -156,6 +156,10 @@ Layer 2+ 채팅 코칭          Claude Code가 history 읽고 정성·맥락 피
 - 색은 검증된 팔레트(상태 good/warn/bad + 승/패 카테고리), 값 라벨 병기로 색 단독 인코딩
   회피, `prefers-color-scheme`로 라이트/다크 대응. CLI: `--dashboard` → `reports/dashboard.html`.
 
-### 7.3 지식베이스 (①, 예정)
-- `youtube-transcript-api`로 자막 수집 → Claude가 1회 정제 → `knowledge/*.md` 원리 파일.
-- 용도: (a) 새 규칙 설계 근거, (b) 채팅 코칭 시 컨텍스트. 정량 자동적용은 아님.
+### 7.3 지식베이스 (①) — `knowledge/`
+- **추출 = 글로벌 스킬 `youtube-transcript`** (`~/.claude/skills/`, 어느 프로젝트에서든 재사용).
+  `youtube-transcript-api`로 자막 → 타임스탬프 제거·문단화한 마크다운. 토큰 ~40% 절약.
+  프로젝트 의존성: `pip install -e ".[knowledge]"`.
+- **증류 = Claude Code 채팅.** raw 자막 → `knowledge/principles/<주제>.md` 구조화 원리
+  (동선·갱타이밍·오브젝트 셋업 등). 자막 원문은 재배포 안 함(`knowledge/raw/`는 gitignore).
+- 용도: (a) `insights.py` 새 규칙 설계 근거, (b) 채팅 코칭 시 컨텍스트. 정량 자동적용은 아님.

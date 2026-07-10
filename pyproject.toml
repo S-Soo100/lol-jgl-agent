@@ -13,6 +13,7 @@ dependencies = [
 
 [project.optional-dependencies]
 viz = ["matplotlib>=3.8", "Pillow>=10.0"]
+knowledge = ["youtube-transcript-api>=1.0"]  # 정글 강의 자막 추출 (글로벌 youtube-transcript 스킬용)
 dev = ["pytest>=8.0"]
 
 [project.scripts]

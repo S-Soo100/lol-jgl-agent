@@ -70,7 +70,7 @@ lol-jgl-agent --count 2 --insights
 - [x] **M4** — 실경기 도그푸딩 (개인 프로파일·벤치마크 캘리브레이션)
 - [x] **M5** — 규칙 엔진 `insights.py` (Tier 1, LLM 없음, `--insights`)
 - [x] **M6** — 대시보드 `report/dashboard.py` (자체완결 HTML, LLM 0, `--dashboard`)
-- [ ] **M7** — 지식베이스 (유튜브 자막 → 정제 원리 `knowledge/`)
+- [~] **M7** — 지식베이스 `knowledge/` (글로벌 스킬 `youtube-transcript`로 자막 추출 → 채팅 증류)
 - [ ] **자동 감시 Level 2/3** — LCU 연동으로 종료 즉시 감지
 
 ## 조언 생성 인증 (1회)
