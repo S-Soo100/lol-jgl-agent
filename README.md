@@ -25,6 +25,7 @@ copy .env.example .env
 
 # 4) 수집 — 최근 랭크 N판 지표를 누적
 lol-jgl-agent --count 5            # 최근 5판 → reports/history.json 누적
+lol-jgl-agent --count 2 --insights # 수집 + 규칙 기반 자동 분석(LLM 없음) 출력
 lol-jgl-agent --count 1 --advice   # 최신 1판 claude -p 자동 조언까지(부가)
 
 # 5) 자동 감시 — 켜두면 새 경기를 자동으로 히스토리에 적립
@@ -42,14 +43,33 @@ pytest
 3. **Claude Code에게 "분석해줘"** 라고 하면, 누적된 전체 데이터를 읽어
    새 판 + 그동안의 트렌드를 함께 짚어 채팅으로 피드백한다.
 
+## 피드백 2단계 구조
+
+- **Tier 1 (LLM 없음):** `analysis/insights.py` 규칙 엔진 — 검증된 코칭(데스·초반과욕·
+  드래곤·**리드 환전**·불리할때 과욕·챔프 적합성·함정 지표)을 결정론 규칙으로 자동 진단.
+  `--insights`로 즉시 출력, 곧 HTML 대시보드로 시각화 예정.
+- **Tier 2 (채팅):** Claude Code가 누적 데이터를 읽고 "왜 졌나" 같은 정성·맥락 코칭.
+
+```powershell
+lol-jgl-agent --count 2 --insights
+# === 자동 분석 (규칙 기반, LLM 없음) ===
+# [최신 경기] Sylas 승 · 21.8분
+# 🟢 데스 2 — 목표 달성 · 🟢 드래곤 2 — 목표 달성 · ⚪ Sylas — 단단한 픽/컴포트
+```
+
+자세한 아키텍처는 [DESIGN.md](DESIGN.md) §7 참조.
+
 ## 진행 상태 (마일스톤)
 
 - [x] **M0** — 환경/저장소 세팅, 프로젝트 스캐폴딩
 - [x] **M1** — Riot API 데이터 수집 (Match + Timeline)
 - [x] **M2** — 정글 지표 계산 엔진
 - [x] **M3** — 조언 생성 + 마크다운 리포트 (조언은 claude CLI 인증 필요)
-- [x] **자동 감시 (Level 1 폴링)** — `lol-jgl-watch`로 새 경기 자동 감지·리포트
-- [ ] **M4** — 실경기 도그푸딩
+- [x] **자동 감시 (Level 1 폴링)** — `lol-jgl-watch`로 새 경기 자동 감지·적립
+- [x] **M4** — 실경기 도그푸딩 (개인 프로파일·벤치마크 캘리브레이션)
+- [x] **M5** — 규칙 엔진 `insights.py` (Tier 1, LLM 없음, `--insights`)
+- [ ] **M6** — 대시보드 (history+insights 자체완결 HTML, LLM 0)
+- [ ] **M7** — 지식베이스 (유튜브 자막 → 정제 원리 `knowledge/`)
 - [ ] **자동 감시 Level 2/3** — LCU 연동으로 종료 즉시 감지
 
 ## 조언 생성 인증 (1회)
@@ -66,8 +86,9 @@ pytest
 src/lol_jgl_agent/
   config.py        # 환경설정 / 상수
   riot/            # Riot API 클라이언트 & 모델
-  analysis/        # 정글 지표 계산 (pathing/jungle/benchmarks)
+  analysis/        # 정글 지표 계산 (pathing/jungle/benchmarks/insights)
   advisor/         # 조언 생성 (prompt + backend)
   report/          # 리포트 렌더링
-  cli.py           # 진입점
+  cli.py           # 진입점 (--insights: 규칙 기반 자동 분석)
+  watch.py         # 자동 적립 워처
 ```

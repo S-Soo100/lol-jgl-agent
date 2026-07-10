@@ -81,7 +81,8 @@ lol-jgl-agent/
     analysis/
       pathing.py            # 좌표 → 맵 구역 변환, 동선 분석
       jungle.py             # 정글 지표 계산
-      benchmarks.py         # 티어별 기준값
+      benchmarks.py         # 개인 캘리브레이션 기준값 (90판 분포)
+      insights.py           # 규칙 기반 자동 분석 (Tier 1, LLM 없음)
     advisor/
       prompt.py             # Claude 프롬프트 템플릿
       backend.py            # 조언 생성 백엔드 (추상 인터페이스)
@@ -97,18 +98,61 @@ lol-jgl-agent/
 
 ## 5. 단계별 로드맵
 
-1. **MVP (현재)**: Riot ID 수동 입력 → 경기 후 리포트 + Claude 조언 (CLI/Markdown)
-2. **자동화**: LCU 연동으로 게임 종료 자동 감지 → 리포트 자동 생성
-3. **시각화**: 동선·데스 히트맵 이미지, 웹 UI(Streamlit/FastAPI)
-4. **실시간**: Live Client API 기반 인게임 오버레이 코칭
+1. **수집기 + 채팅 피드백 (현재)**: `--count N`으로 지표를 `history.json`에 누적,
+   Claude Code 채팅으로 정성 피드백. (§7 참조 — 초기 "LLM 리포트 MVP"에서 피벗)
+2. **② 규칙 엔진 (완료)**: `analysis/insights.py` — LLM 없이 검증된 코칭을 자동 적용.
+3. **③ 대시보드**: `history.json` + insights → 자체완결 HTML 시각화 (LLM 0).
+4. **① 지식베이스**: 정글 강의 유튜브 자막 → 정제 원리 `knowledge/` → 룰·채팅 강화.
+5. **자동화/실시간**: LCU 자동 감지, Live Client 오버레이 코칭.
 
 ---
 
-## 6. 주요 의존성 (예정)
+## 6. 주요 의존성
 
-- `httpx` — Riot API 비동기 호출
+- `httpx` — Riot API 호출
 - `pydantic` — 데이터 모델 검증
-- `anthropic` — Claude API (조언 생성)
+- `python-dotenv` — `.env` 로딩
 - `jinja2` — 리포트 템플릿
-- `matplotlib` / `Pillow` — 히트맵 이미지 (3단계)
+- `anthropic` — API 백엔드(선택, `--advice` 배포용)
+- `matplotlib` / `Pillow` — 히트맵 이미지 (선택)
 - `pytest` — 테스트
+
+---
+
+## 7. 피드백 2단계 구조 (2026-07 피벗)
+
+초기 기획은 "지표 → LLM이 리포트 생성"이 MVP였으나, 실사용에서 **도구는 지표
+수집기로 두고 피드백은 Claude Code 채팅으로 받는 방식**이 더 강력함을 확인해 피벗했다.
+여러 판에 걸친 반복 습관을 짚는 게 코칭의 핵심이고, OAuth 토큰 의존도 피할 수 있다.
+
+```
+Layer 0  수집기            Riot API → 정글 지표 → reports/history.json 누적
+Layer 1  규칙 엔진 (②)     insights.py: 결정론 규칙 → 발견(Finding) 목록      [LLM 0]
+Layer 2  대시보드 (③)      history + insights → 자체완결 HTML 시각화          [LLM 0]
+지식     지식베이스 (①)    유튜브 자막 → 정제 원리 → 룰 설계 + 채팅 컨텍스트   [LLM 1회]
+Layer 2+ 채팅 코칭          Claude Code가 history 읽고 정성·맥락 피드백        [채팅]
+```
+
+| | Tier 1 (LLM 없음) | Tier 2 (채팅) |
+|---|---|---|
+| 구성 | insights 규칙 + 대시보드 | Claude Code + 지식베이스 |
+| 성격 | 즉시·항상, **정량** 패턴 | 깊은·맥락, **정성** 코칭 |
+| 예 | "리드 환전 실패(바론0)", "초반 과욕 3데스" | "왜 그 한타를 졌나", 챔프별 운영 |
+
+### 7.1 규칙 엔진 (`insights.py`)
+- 입력: `history.json`의 경기 레코드(dict) 하나. 출력: `Finding(severity, category, title, detail)` 목록.
+- 규칙(도그푸딩으로 검증된 개인 코칭): 데스(승패 1순위)·초반 과욕·드래곤(2순위)·
+  **리드 환전 실패/성공**·불리할 때 과욕·챔프 적합성·함정 지표 무관 승리·단축 경기.
+- 임계값은 90~100판 벤치마크 기준(`BIG_LEAD_GOLD=1500`, `DEATH_GOAL=5`, `DRAGON_GOAL=2` 등),
+  데이터가 쌓이면 재캘리브레이션.
+- CLI: `lol-jgl-agent --count N --insights` (opt-in). `render_findings`가 심각도순 출력.
+- **한계:** 정량 패턴만. "왜 한타를 졌나" 같은 정성/맥락은 Tier 2(채팅)의 몫.
+
+### 7.2 대시보드 (③, 예정)
+- `history.json` + `insights` 출력 → 정적 HTML 1파일(자체완결, 외부 요청 0).
+- 요소: 데스/드래곤 추세, 챔프별 승률, 리드 환전(골드@15 vs 결과·시간), 처방전 목표
+  스코어카드, 발견 목록. 런타임 LLM 호출 없이 기본 피드백 제공.
+
+### 7.3 지식베이스 (①, 예정)
+- `youtube-transcript-api`로 자막 수집 → Claude가 1회 정제 → `knowledge/*.md` 원리 파일.
+- 용도: (a) 새 규칙 설계 근거, (b) 채팅 코칭 시 컨텍스트. 정량 자동적용은 아님.

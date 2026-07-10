@@ -27,6 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--count", type=int, default=3, help="수집할 최근 랭크 경기 수. 기본 3.")
     p.add_argument("--advice", action="store_true",
                    help="최신 경기에 대해 구독 Claude(claude -p) 자동 조언·리포트도 생성.")
+    p.add_argument("--insights", action="store_true",
+                   help="수집한 최신 경기 + 최근 추세를 규칙 기반으로 자동 분석(LLM 없이) 출력.")
     return p
 
 
@@ -71,11 +73,29 @@ def main() -> None:
     print(f"\n새로 {added}판 추가 · 누적 {total}판 → {history.HISTORY_PATH}")
     print("Claude Code에게 \"분석해줘\" 라고 하면 누적 데이터로 피드백해 드립니다.")
 
+    if args.insights and records:
+        _print_insights(records[0])
+
     if advice_result and advice_result.advice:
         print("\n=== 최신 경기 조언 ===")
         print(advice_result.advice)
     elif advice_result and advice_result.advice_error:
         print(f"\n[!] 조언 생략: {advice_result.advice_error}")
+
+
+def _print_insights(newest: dict) -> None:
+    """규칙 기반 자동 분석(LLM 없음)을 출력."""
+    from .analysis.insights import analyze_game, render_findings, summarize_recent
+
+    result = "승" if newest.get("win") else "패"
+    print("\n=== 자동 분석 (규칙 기반, LLM 없음) ===")
+    print(f"[최신 경기] {newest.get('champion')} {result} · {newest.get('duration_min')}분")
+    print(render_findings(analyze_game(newest)))
+
+    recent = summarize_recent(history.load_history())
+    if recent:
+        print("\n[최근 추세]")
+        print(render_findings(recent))
 
 
 def _print_table(riot_id: str, metrics: list[JungleMetrics], match_ids: list[str]) -> None:
