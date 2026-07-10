@@ -62,6 +62,10 @@ th{color:var(--muted);font-weight:600;font-size:11px}
 .d-bad{background:var(--bad)}.d-info{background:var(--muted)}
 .det{color:var(--ink2)}
 .empty{color:var(--ink2);text-align:center;padding:40px}
+.updbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.updbar input{width:56px;padding:5px 7px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--ink);font-size:13px}
+.updbar button{padding:7px 16px;border:0;border-radius:8px;background:var(--win);color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.updbar button:disabled{opacity:.55;cursor:default}
 """
 
 _SEV_CLASS = {"good": "d-good", "warn": "d-warn", "bad": "d-bad", "info": "d-info"}
@@ -177,11 +181,40 @@ def _findings_list(rec: dict) -> str:
     return f'<ul class="finds">{"".join(items)}</ul>'
 
 
-def render_dashboard(records: list[dict], *, riot_id: str = "", subtitle: str = "") -> str:
-    """전체 히스토리 레코드 → 자체완결 HTML 문자열."""
+def _update_widgets(update_url: str | None) -> tuple[str, str]:
+    """서버 모드일 때만 '업데이트' 버튼 + JS 반환. 정적 파일이면 ("", "")."""
+    if not update_url:
+        return "", ""
+    bar = (
+        '<div class="card updbar">'
+        '<span>최근 <input id="cnt" type="number" value="5" min="1" max="20">판 수집</span>'
+        '<button id="updbtn">업데이트</button>'
+        '<span id="updmsg" class="det"></span></div>'
+    )
+    script = (
+        "<script>document.getElementById('updbtn').addEventListener('click',async function(){"
+        "var b=this,m=document.getElementById('updmsg'),c=document.getElementById('cnt').value;"
+        "b.disabled=true;m.textContent='수집 중...';"
+        "try{var r=await fetch(" + f"'{update_url}?count='" + "+encodeURIComponent(c),{method:'POST'});"
+        "var j=await r.json();"
+        "if(j.ok){m.textContent='새로 '+j.added+'판 (누적 '+j.total+') — 새로고침';location.reload();}"
+        "else{m.textContent='오류: '+j.error;b.disabled=false;}"
+        "}catch(e){m.textContent='오류: '+e;b.disabled=false;}});</script>"
+    )
+    return bar, script
+
+
+def render_dashboard(records: list[dict], *, riot_id: str = "", subtitle: str = "",
+                     update_url: str | None = None) -> str:
+    """전체 히스토리 레코드 → 자체완결 HTML 문자열.
+
+    update_url이 주어지면(로컬 서버) '업데이트' 버튼+JS를 주입한다.
+    None(정적 파일)이면 JS 없이 완전 정적.
+    """
     title = f"🐉 정글 대시보드{f' — {escape(riot_id)}' if riot_id else ''}"
+    updbar, updscript = _update_widgets(update_url)
     if not records:
-        body = '<div class="card"><div class="empty">데이터 없음 — 먼저 <code>lol-jgl-agent --count N</code>으로 수집하세요.</div></div>'
+        body = updbar + '<div class="card"><div class="empty">데이터 없음 — 먼저 <code>lol-jgl-agent --count N</code>으로 수집하세요.</div></div>' + updscript
         return _page(title, subtitle, body)
 
     # 최신순 저장 → 추세는 시간순(왼→오른쪽=과거→최신)
@@ -201,6 +234,7 @@ def render_dashboard(records: list[dict], *, riot_id: str = "", subtitle: str = 
               '<span><i style="background:var(--loss)"></i>패</span></div>')
 
     body = (
+        f'{updbar}'
         f'<div class="card"><h2>요약</h2>{_tiles(records)}</div>'
         f'{note}'
         f'<div class="card"><h2>데스 추세 (승패 1순위 · 목표 ≤{DEATH_GOAL})</h2>'
@@ -213,6 +247,7 @@ def render_dashboard(records: list[dict], *, riot_id: str = "", subtitle: str = 
         f'<div class="card"><h2>챔프별 성적</h2>{_champ_table(records)}</div>'
         f'<div class="card"><h2>최신 경기 자동 분석 — {escape(records[0].get("champion", "?"))} '
         f'{"승" if records[0].get("win") else "패"}</h2>{_findings_list(records[0])}</div>'
+        f'{updscript}'
     )
     return _page(title, subtitle, body)
 

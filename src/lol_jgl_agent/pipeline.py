@@ -11,7 +11,7 @@ from .advisor.backend import AdvisorError, make_advisor
 from .analysis.jungle import JungleMetrics, compute_jungle_metrics
 from .config import REPORTS_DIR, Settings
 from .report.renderer import render_markdown
-from .riot.client import RiotClient
+from .riot.client import RiotApiError, RiotClient
 
 
 @dataclass
@@ -28,6 +28,24 @@ def collect_metrics(riot: RiotClient, puuid: str, match_id: str) -> JungleMetric
     match = riot.match(match_id)
     timeline = riot.timeline(match_id)
     return compute_jungle_metrics(match, timeline, puuid)
+
+
+def collect_recent(settings: Settings, riot_id: str, count: int) -> tuple[list[dict], str | None]:
+    """Riot에서 최근 count판의 지표 레코드를 수집. (records, error_msg) 반환.
+
+    server/버튼 등 호출자가 콘솔 없이 재사용하기 위한 헬퍼.
+    """
+    try:
+        with RiotClient(settings) as riot:
+            puuid = riot.puuid_by_riot_id(riot_id)
+            match_ids = riot.recent_ranked_match_ids(puuid, count=count)
+            if not match_ids:
+                return [], "최근 랭크 경기를 찾지 못했습니다."
+            records = [metrics_to_record(collect_metrics(riot, puuid, mid), mid)
+                       for mid in match_ids]
+            return records, None
+    except RiotApiError as e:
+        return [], f"Riot API 오류: {e}"
 
 
 def metrics_to_record(metrics: JungleMetrics, match_id: str) -> dict:

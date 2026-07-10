@@ -19,6 +19,7 @@ dev = ["pytest>=8.0"]
 [project.scripts]
 lol-jgl-agent = "lol_jgl_agent.cli:main"
 lol-jgl-watch = "lol_jgl_agent.watch:main"
+lol-jgl-serve = "lol_jgl_agent.serve:main"
 
 [build-system]
 requires = ["hatchling"]

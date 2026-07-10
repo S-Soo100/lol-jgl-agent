@@ -46,6 +46,21 @@ def test_win_rate_tile():
     assert "67%" in html  # 2/3 승률
 
 
+def test_static_mode_has_no_script():
+    # 정적 파일(update_url 없음)은 JS 주입 안 함
+    html = render_dashboard([_rec()])
+    assert "<script" not in html
+    assert "업데이트" not in html
+
+
+def test_interactive_mode_injects_button():
+    html = render_dashboard([_rec()], update_url="/update")
+    assert "<script" in html
+    assert "업데이트" in html          # 버튼 라벨
+    assert "/update?count=" in html    # POST 엔드포인트
+    assert 'id="cnt"' in html           # 판수 입력
+
+
 def test_write_dashboard(tmp_path):
     out = write_dashboard([_rec()], tmp_path / "sub" / "dashboard.html", riot_id="X#1")
     assert out.exists()

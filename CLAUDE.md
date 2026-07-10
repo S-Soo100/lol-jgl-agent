@@ -43,7 +43,7 @@ lol-jgl-watch                       # 백그라운드 자동 적립
 - `history.py` — 지표 누적 저장소 (reports/history.json)
 - `advisor/` — `--advice` 옵션용 claude -p 조언 (부가)
 - `report/renderer.py` — `--advice` 시 마크다운 리포트 · `report/dashboard.py` — `--dashboard` 자체완결 HTML(인라인 SVG, LLM 0)
-- `cli.py` — 수집 진입점(`--insights` 규칙분석 / `--dashboard` HTML) · `watch.py` — 자동 적립 워처
+- `cli.py` — 수집 진입점(`--insights`/`--dashboard`/`--open`/`--no-collect`) · `watch.py` — 자동 적립 워처 · `serve.py` — 로컬 대시보드 서버(페이지 내 '업데이트' 버튼)
 
 ## 2단계 피드백 구조
 - **Tier 1 (LLM 없음):** `analysis/insights.py` 규칙 엔진 — 검증된 코칭(데스·초반과욕·드래곤·리드환전·불리할때과욕·챔프적합성·함정지표)을 결정론 규칙으로 적용. `--insights`로 즉시 출력. 정량 패턴만.

@@ -155,6 +155,9 @@ Layer 2+ 채팅 코칭          Claude Code가 history 읽고 정성·맥락 피
   (골드@15 부호 막대, 색=승/패), 챔프별 성적 표, 최신 경기 발견 목록.
 - 색은 검증된 팔레트(상태 good/warn/bad + 승/패 카테고리), 값 라벨 병기로 색 단독 인코딩
   회피, `prefers-color-scheme`로 라이트/다크 대응. CLI: `--dashboard` → `reports/dashboard.html`.
+- **정적 vs 서버:** 기본은 JS 0 정적 파일. `render_dashboard(update_url=...)`을 주면 '업데이트'
+  버튼+JS를 주입 — `serve.py`(`lol-jgl-serve`)가 127.0.0.1에 서빙하고 POST `/update`로
+  수집→새로고침. 정적 파일 모드는 JS 없이 그대로(테스트로 보장).
 
 ### 7.3 지식베이스 (①) — `knowledge/`
 - **추출 = 글로벌 스킬 `youtube-transcript`** (`~/.claude/skills/`, 어느 프로젝트에서든 재사용).

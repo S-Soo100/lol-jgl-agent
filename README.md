@@ -42,12 +42,17 @@ pytest
 
 | 파일 | 하는 일 |
 |---|---|
-| **`전적-업데이트.cmd`** | 최근 5판 수집 + 자동분석 + 대시보드 생성·열기 (Riot 키 필요) |
+| **`대시보드-서버.cmd`** | 대시보드 서버 실행 → 브라우저에서 **페이지 안 '업데이트' 버튼**으로 수집·갱신 (추천) |
+| **`전적-업데이트.cmd`** | 최근 5판 수집 + 자동분석 + 대시보드 생성·열기 (한 방) |
 | **`대시보드-열기.cmd`** | Riot 수집 없이 기존 데이터로 대시보드만 즉시 열기 |
 
 바탕화면에 두고 싶으면 `.cmd` 우클릭 → "바로 가기 만들기" → 바탕화면으로.
 
-동일 동작 CLI 옵션: `--open`(생성 후 브라우저 자동 열기), `--no-collect`(Riot 없이 기존 히스토리로 실행).
+CLI로도: `lol-jgl-serve`(업데이트 버튼 서버), `--open`(생성 후 자동 열기), `--no-collect`(Riot 없이 기존 히스토리).
+
+```powershell
+lol-jgl-serve                 # 127.0.0.1 로컬 서버 + 브라우저 열기 → 페이지에서 '업데이트' 클릭
+```
 
 ## 메인 워크플로우
 
@@ -103,6 +108,7 @@ src/lol_jgl_agent/
   analysis/        # 정글 지표 계산 (pathing/jungle/benchmarks/insights)
   advisor/         # 조언 생성 (prompt + backend)
   report/          # 리포트 렌더링 (renderer + dashboard HTML)
-  cli.py           # 진입점 (--insights 규칙분석 / --dashboard HTML)
+  cli.py           # 진입점 (--insights 규칙분석 / --dashboard HTML / --open / --no-collect)
   watch.py         # 자동 적립 워처
+  serve.py         # 로컬 대시보드 서버 (페이지 안 '업데이트' 버튼)
 ```
