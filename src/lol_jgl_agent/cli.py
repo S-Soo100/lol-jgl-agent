@@ -31,6 +31,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="수집한 최신 경기 + 최근 추세를 규칙 기반으로 자동 분석(LLM 없이) 출력.")
     p.add_argument("--dashboard", action="store_true",
                    help="누적 히스토리를 자체완결 HTML 대시보드(reports/dashboard.html)로 생성.")
+    p.add_argument("--open", action="store_true",
+                   help="대시보드를 기본 브라우저로 자동으로 연다.")
+    p.add_argument("--no-collect", action="store_true",
+                   help="Riot 수집 없이 기존 히스토리로 --insights/--dashboard만 실행.")
     return p
 
 
@@ -42,50 +46,60 @@ def main() -> None:
     settings = Settings.load()
     riot_id = args.riot_id or settings.default_riot_id
 
-    if not settings.riot_api_key:
-        print("[!] RIOT_API_KEY가 설정되지 않았습니다. .env를 확인하세요.")
-        return
-    if not riot_id:
-        print("[!] Riot ID가 없습니다. --riot-id 또는 .env의 DEFAULT_RIOT_ID를 설정하세요.")
-        return
+    records: list[dict] = []
+    if not args.no_collect:
+        if not settings.riot_api_key:
+            print("[!] RIOT_API_KEY가 설정되지 않았습니다. .env를 확인하세요.")
+            return
+        if not riot_id:
+            print("[!] Riot ID가 없습니다. --riot-id 또는 .env의 DEFAULT_RIOT_ID를 설정하세요.")
+            return
 
-    try:
-        with RiotClient(settings) as riot:
-            puuid = riot.puuid_by_riot_id(riot_id)
-            match_ids = riot.recent_ranked_match_ids(puuid, count=args.count)
-            if not match_ids:
-                print(f"[!] {riot_id}의 최근 랭크 경기를 찾지 못했습니다.")
-                return
-            print(f"{len(match_ids)}판 수집 중...")
-            metrics = [collect_metrics(riot, puuid, mid) for mid in match_ids]
-            records = [metrics_to_record(m, mid) for m, mid in zip(metrics, match_ids)]
+        try:
+            with RiotClient(settings) as riot:
+                puuid = riot.puuid_by_riot_id(riot_id)
+                match_ids = riot.recent_ranked_match_ids(puuid, count=args.count)
+                if not match_ids:
+                    print(f"[!] {riot_id}의 최근 랭크 경기를 찾지 못했습니다.")
+                    return
+                print(f"{len(match_ids)}판 수집 중...")
+                metrics = [collect_metrics(riot, puuid, mid) for mid in match_ids]
+                records = [metrics_to_record(m, mid) for m, mid in zip(metrics, match_ids)]
 
-            advice_result = None
-            if args.advice:
-                print("최신 경기 조언 생성 중 (구독 Claude)...")
-                advice_result = analyze_match(
-                    settings, riot, riot_id=riot_id, puuid=puuid, match_id=match_ids[0],
-                )
-    except RiotApiError as e:
-        print(f"[!] Riot API 오류: {e}")
-        return
+                advice_result = None
+                if args.advice:
+                    print("최신 경기 조언 생성 중 (구독 Claude)...")
+                    advice_result = analyze_match(
+                        settings, riot, riot_id=riot_id, puuid=puuid, match_id=match_ids[0],
+                    )
+        except RiotApiError as e:
+            print(f"[!] Riot API 오류: {e}")
+            return
 
-    added, total, _ = history.merge(records)
-    _print_table(riot_id, metrics, match_ids)
-    print(f"\n새로 {added}판 추가 · 누적 {total}판 → {history.HISTORY_PATH}")
-    print("Claude Code에게 \"분석해줘\" 라고 하면 누적 데이터로 피드백해 드립니다.")
+        added, total, _ = history.merge(records)
+        _print_table(riot_id, metrics, match_ids)
+        print(f"\n새로 {added}판 추가 · 누적 {total}판 → {history.HISTORY_PATH}")
+        print("Claude Code에게 \"분석해줘\" 라고 하면 누적 데이터로 피드백해 드립니다.")
 
-    if args.insights and records:
-        _print_insights(records[0])
+        if advice_result and advice_result.advice:
+            print("\n=== 최신 경기 조언 ===")
+            print(advice_result.advice)
+        elif advice_result and advice_result.advice_error:
+            print(f"\n[!] 조언 생략: {advice_result.advice_error}")
+
+    # --insights/--dashboard는 방금 수집분 또는 기존 히스토리로 동작
+    newest = records[0] if records else next(iter(history.load_history()), None)
+
+    if args.insights:
+        if newest:
+            _print_insights(newest)
+        else:
+            print("[!] 히스토리가 비어 있습니다. 먼저 수집하세요 (--count N).")
 
     if args.dashboard:
-        _write_dashboard(riot_id)
-
-    if advice_result and advice_result.advice:
-        print("\n=== 최신 경기 조언 ===")
-        print(advice_result.advice)
-    elif advice_result and advice_result.advice_error:
-        print(f"\n[!] 조언 생략: {advice_result.advice_error}")
+        _write_dashboard(riot_id, open_browser=args.open)
+    elif args.open:
+        _open_dashboard()
 
 
 def _print_insights(newest: dict) -> None:
@@ -103,15 +117,36 @@ def _print_insights(newest: dict) -> None:
         print(render_findings(recent))
 
 
-def _write_dashboard(riot_id: str) -> None:
-    """누적 히스토리를 HTML 대시보드로 저장."""
+def _write_dashboard(riot_id: str, *, open_browser: bool = False) -> None:
+    """누적 히스토리를 HTML 대시보드로 저장(선택적으로 브라우저로 연다)."""
     from .config import REPORTS_DIR
     from .report.dashboard import write_dashboard
 
     path = write_dashboard(history.load_history(), REPORTS_DIR / "dashboard.html",
                            riot_id=riot_id)
     print(f"\n대시보드 생성: {path}")
-    print("  브라우저로 열면 LLM 호출 없이 기본 피드백을 볼 수 있어요.")
+    if open_browser:
+        _open_path(path)
+    else:
+        print("  브라우저로 열면 LLM 호출 없이 기본 피드백을 볼 수 있어요.")
+
+
+def _open_dashboard() -> None:
+    """이미 생성된 대시보드를 브라우저로 연다."""
+    from .config import REPORTS_DIR
+
+    path = REPORTS_DIR / "dashboard.html"
+    if path.exists():
+        _open_path(path)
+    else:
+        print(f"[!] 대시보드가 없습니다. --dashboard로 먼저 생성하세요. ({path})")
+
+
+def _open_path(path) -> None:
+    import webbrowser
+
+    webbrowser.open(path.resolve().as_uri())
+    print(f"  브라우저로 열었습니다: {path}")
 
 
 def _print_table(riot_id: str, metrics: list[JungleMetrics], match_ids: list[str]) -> None:
