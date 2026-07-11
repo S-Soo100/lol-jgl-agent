@@ -43,6 +43,26 @@ def test_game_feed_per_game_capped():
     assert html.count('<div class="fl">') <= FEED_FINDINGS
 
 
+def test_opponent_section_renders():
+    rec = _rec(opponent={
+        "champion": "Amumu", "kills": 9, "deaths": 5, "assists": 13,
+        "kill_participation": 0.65, "cs_at_10": 62, "cs_per_min": 6.36,
+        "dragon_takedowns": 1, "gold_lead_over_me_at_15": 988,
+        "gank_lanes": {"TOP": 0, "MID": 3, "BOT": 4}, "early_path": ["MID", "BOT_JG"],
+        "first_gank_min": 4.3, "my_deaths_involved": 7,
+    })
+    html = render_dashboard([rec])
+    assert "vs 상대 정글" in html
+    assert "Amumu" in html
+    assert "나를 7번 잡음" in html
+    assert "바텀정글" in html          # 동선 한글 변환
+
+
+def test_no_opponent_no_section():
+    html = render_dashboard([_rec()])   # opponent 없음
+    assert "vs 상대 정글" not in html
+
+
 def test_game_card_has_phase_detail():
     # 각 게임 카드에 초반/후반 역할 펼치기(<details>, JS 없이)
     html = render_dashboard([_rec()])

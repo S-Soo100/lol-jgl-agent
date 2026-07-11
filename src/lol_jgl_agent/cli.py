@@ -14,7 +14,13 @@ import sys
 from . import history
 from .analysis.jungle import JungleMetrics
 from .config import Settings
-from .pipeline import analyze_match, collect_metrics, metrics_to_record
+from .pipeline import (
+    analyze_match,
+    backfill_opponents,
+    collect_metrics,
+    metrics_to_record,
+    opponent_summary,
+)
 from .riot.client import RiotApiError, RiotClient
 
 
@@ -35,6 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="대시보드를 기본 브라우저로 자동으로 연다.")
     p.add_argument("--no-collect", action="store_true",
                    help="Riot 수집 없이 기존 히스토리로 --insights/--dashboard만 실행.")
+    p.add_argument("--backfill-opponent", action="store_true",
+                   help="기존 히스토리에 상대 정글 요약을 캐시 기반으로 소급 채운다.")
     return p
 
 
@@ -45,6 +53,15 @@ def main() -> None:
     args = build_parser().parse_args()
     settings = Settings.load()
     riot_id = args.riot_id or settings.default_riot_id
+
+    if args.backfill_opponent:
+        if not riot_id:
+            print("[!] Riot ID가 없습니다.")
+            return
+        print("상대 정글 소급 채우는 중 (캐시 기반)...")
+        updated, err = backfill_opponents(settings, riot_id)
+        print(f"[!] {err}" if err else f"{updated}판에 상대 정글 요약 추가 완료.")
+        return
 
     records: list[dict] = []
     if not args.no_collect:
@@ -64,7 +81,11 @@ def main() -> None:
                     return
                 print(f"{len(match_ids)}판 수집 중...")
                 metrics = [collect_metrics(riot, puuid, mid) for mid in match_ids]
-                records = [metrics_to_record(m, mid) for m, mid in zip(metrics, match_ids)]
+                records = []
+                for m, mid in zip(metrics, match_ids):
+                    rec = metrics_to_record(m, mid)
+                    rec["opponent"] = opponent_summary(riot, puuid, mid)
+                    records.append(rec)
 
                 advice_result = None
                 if args.advice:

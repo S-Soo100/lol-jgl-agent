@@ -10,6 +10,7 @@ from html import escape
 from pathlib import Path
 
 from ..analysis.insights import _SEVERITY_ORDER, DRAGON_GOAL, analyze_game, phase_breakdown
+from ..analysis.pathing import ko
 
 MAX_TREND_GAMES = 16  # 추세 차트에 표시할 최근 경기 수
 GAME_FEED_LIMIT = 12  # 게임별 피드백 카드로 보여줄 최근 경기 수
@@ -80,6 +81,9 @@ th{color:var(--muted);font-weight:600;font-size:11px}
 .ph b{font-size:12px}
 .phs{color:var(--ink2);font-size:11px;margin:1px 0 0 17px}
 .phtip{color:var(--muted);font-size:11px;margin-left:17px}
+.cmp{font-size:11px;margin:5px 0;width:100%}
+.cmp td,.cmp th{padding:2px 6px;text-align:right;border-bottom:1px solid var(--grid)}
+.cmp td:first-child,.cmp th:first-child{text-align:left;color:var(--muted)}
 """
 
 _SEV_CLASS = {"good": "d-good", "warn": "d-warn", "bad": "d-bad", "info": "d-info"}
@@ -185,6 +189,43 @@ def _champ_table(records: list[dict]) -> str:
     return f"<table>{head}{''.join(rows)}</table>"
 
 
+def _opponent_detail(rec: dict) -> str:
+    """게임 카드의 'vs 상대 정글' 펼치기 (opponent 없으면 '')."""
+    opp = rec.get("opponent")
+    if not opp:
+        return ""
+    champ = escape(opp.get("champion", "?"))
+
+    def pct(v):
+        return f"{round((v or 0) * 100)}%"
+
+    me_kda = f"{rec.get('kills', 0)}/{rec.get('deaths', 0)}/{rec.get('assists', 0)}"
+    op_kda = f"{opp.get('kills', 0)}/{opp.get('deaths', 0)}/{opp.get('assists', 0)}"
+    rows = [
+        ("KDA", me_kda, op_kda),
+        ("킬관여", pct(rec.get("kill_participation")), pct(opp.get("kill_participation"))),
+        ("CS@10", rec.get("cs_at_10"), opp.get("cs_at_10")),
+        ("분당CS", rec.get("cs_per_min"), opp.get("cs_per_min")),
+        ("드래곤", rec.get("dragon_takedowns"), opp.get("dragon_takedowns")),
+    ]
+    trs = "".join(
+        f"<tr><td>{escape(l)}</td><td>{escape(str(a))}</td><td>{escape(str(b))}</td></tr>"
+        for l, a, b in rows
+    )
+    gl = opp.get("gank_lanes", {})
+    gank = f"탑 {gl.get('TOP', 0)} · 미드 {gl.get('MID', 0)} · 바텀 {gl.get('BOT', 0)}"
+    path = " → ".join(ko(z) for z in (opp.get("early_path") or [])) or "-"
+    gold = opp.get("gold_lead_over_me_at_15")
+    goldtxt = (f" · 상대 15분 골드 {'+' if (gold or 0) > 0 else ''}{gold}") if gold is not None else ""
+    return (
+        f'<details><summary>vs 상대 정글 — {champ}</summary>'
+        f'<table class="cmp"><tr><th></th><th>나</th><th>{champ}</th></tr>{trs}</table>'
+        f'<div class="phs">상대 갱: {gank} · 나를 {opp.get("my_deaths_involved", 0)}번 잡음{goldtxt}</div>'
+        f'<div class="phs">상대 초반 동선(1~10분): {escape(path)}</div>'
+        f'</details>'
+    )
+
+
 def _game_feed(records: list[dict]) -> str:
     """최근 경기별로 헤더 1줄 + 규칙 발견 ≤4줄(총 ≤5줄) 카드를 렌더."""
     cards = []
@@ -212,7 +253,8 @@ def _game_feed(records: list[dict]) -> str:
             f'<div class="gcard"><div class="ghead">'
             f'<span class="{rescls}">{champ} {res}</span> '
             f'<span class="det">{r.get("duration_min")}분 · KDA {kda}</span></div>{lines}'
-            f'<details><summary>역할 상세 (초반/후반)</summary>{detail}</details></div>'
+            f'<details><summary>역할 상세 (초반/후반)</summary>{detail}</details>'
+            f'{_opponent_detail(r)}</div>'
         )
     return "".join(cards)
 
