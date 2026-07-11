@@ -21,13 +21,16 @@
 - `principles/` — 증류된 정글 원리(우리 자산). 커밋 대상.
 
 ## 원리 색인 (principles/)
-정글 VOD 코칭 3편에서 증류. 각 파일 끝에 **이 플레이어에게 적용** 절이 있음.
+정글 VOD 코칭 영상에서 증류. 각 파일 끝에 **이 플레이어에게 적용** 절이 있음.
 - [01 정글 기본기](principles/01-jungle-fundamentals.md) — 풀캠·1.5캠 루틴·파밍 중 맵읽기·카메라 단축키·렌즈
 - [02 맵읽기 & 상대 정글러](principles/02-reading-map-and-enemy-jungler.md) — 우리팀 라인 우선·상대 예측·조우 3분기점·교전형vs성장형·주도권
 - [03 유리한 라인 굴리기 & 시팅](principles/03-snowball-and-sitting.md) — 따라오게 하기·시팅(뒤봐주기)·역갱·지는 라인 버리기·턴 반대편
 - [04 중반 15~25분 굴리기](principles/04-midgame-closing-15-25.md) — 뇌정지 구간·타워 목표·유리/불리 운영·10분 후 바텀
+- [05 시간대별 수싸움 & 선턴](principles/05-timing-and-tempo.md) — 4:00/5:20/6:30 수싸움·XP 스파이크·선턴(템포)·정크무빙 제거
+- [06 드래곤 타이밍](principles/06-dragon-timing.md) — 초반=바텀 주도권·후반=미드푸시 먼저·안 되는 용은 포기
+- [07 운영 & 덧셈(인원수)](principles/07-operating-and-numbers.md) — 덧셈(인원수)·스타트/첫캠·상대정글 유추·미드1차 사수·유리할때 선푸시+빈쪽 이득
 
-출처 영상: [7BGt25QW2UQ](https://youtu.be/7BGt25QW2UQ) · [3b1QJ6pShBA](https://youtu.be/3b1QJ6pShBA) · [DpZIBN3St9I](https://youtu.be/DpZIBN3St9I)
+출처 영상: [7BGt25QW2UQ](https://youtu.be/7BGt25QW2UQ) · [3b1QJ6pShBA](https://youtu.be/3b1QJ6pShBA) · [DpZIBN3St9I](https://youtu.be/DpZIBN3St9I) · 재생목록 5편([mnQQC19IUw4](https://youtu.be/mnQQC19IUw4) · [W4HPRvGpnVw](https://youtu.be/W4HPRvGpnVw) · [g5Jb3nPjZSI](https://youtu.be/g5Jb3nPjZSI) · [K-JIjThki7A](https://youtu.be/K-JIjThki7A) · [K1YwnJaxtCs](https://youtu.be/K1YwnJaxtCs))
 
 ## 주의
 - 자막 있는 영상만. 자동자막은 품질 편차 있어 증류(LLM 1회)가 필요.
