@@ -215,12 +215,21 @@ def _opponent_detail(rec: dict) -> str:
     gl = opp.get("gank_lanes", {})
     gank = f"탑 {gl.get('TOP', 0)} · 미드 {gl.get('MID', 0)} · 바텀 {gl.get('BOT', 0)}"
     path = " → ".join(ko(z) for z in (opp.get("early_path") or [])) or "-"
+    route = " · ".join(
+        f'{g.get("min")}분 {escape(str(g.get("lane")))}({escape(str(g.get("victim")))})'
+        for g in (opp.get("gank_events") or [])
+    ) or "-"
     gold = opp.get("gold_lead_over_me_at_15")
     goldtxt = (f" · 상대 15분 골드 {'+' if (gold or 0) > 0 else ''}{gold}") if gold is not None else ""
+    # 상대가 나보다 잘한 판 표시(공부 대상): 드래곤 더 많고 덜 죽음
+    better = (opp.get("dragon_takedowns", 0) > rec.get("dragon_takedowns", 0)
+              and opp.get("deaths", 99) < rec.get("deaths", 0))
+    badge = ' <span style="color:var(--loss);font-size:11px">▲ 상대 우세(공부)</span>' if better else ""
     return (
-        f'<details><summary>vs 상대 정글 — {champ}</summary>'
+        f'<details><summary>vs 상대 정글 — {champ}{badge}</summary>'
         f'<table class="cmp"><tr><th></th><th>나</th><th>{champ}</th></tr>{trs}</table>'
         f'<div class="phs">상대 갱: {gank} · 나를 {opp.get("my_deaths_involved", 0)}번 잡음{goldtxt}</div>'
+        f'<div class="phs">상대 갱 루트: {route}</div>'
         f'<div class="phs">상대 초반 동선(1~10분): {escape(path)}</div>'
         f'</details>'
     )

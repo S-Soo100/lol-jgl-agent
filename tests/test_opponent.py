@@ -57,6 +57,9 @@ def test_enemy_jungler_summary():
     assert sum(opp["gank_lanes"].values()) == 1        # 15분 전 킬 1개
     assert opp["gank_lanes"]["BOT"] == 1               # 바텀에서
     assert len(opp["early_path"]) == 10                # 1~10분 동선
+    assert len(opp["gank_events"]) == 1                # 갱 루트 타임라인
+    assert opp["gank_events"][0]["victim"] == "LeeSin"
+    assert opp["gank_events"][0]["lane"] == "바텀"
 
 
 def test_no_enemy_jungler_returns_none():
