@@ -29,8 +29,10 @@
 - [05 시간대별 수싸움 & 선턴](principles/05-timing-and-tempo.md) — 4:00/5:20/6:30 수싸움·XP 스파이크·선턴(템포)·정크무빙 제거
 - [06 드래곤 타이밍](principles/06-dragon-timing.md) — 초반=바텀 주도권·후반=미드푸시 먼저·안 되는 용은 포기
 - [07 운영 & 덧셈(인원수)](principles/07-operating-and-numbers.md) — 덧셈(인원수)·스타트/첫캠·상대정글 유추·미드1차 사수·유리할때 선푸시+빈쪽 이득
+- [08 후반 위치잡기 & 역전](principles/08-late-positioning-and-comeback.md) — **밀었으면 앞 X 옆 O**·쫓지마·유리할땐 일방적 이득·지고있을때 역전·교전형vs성장형 운영
 
-출처 영상: [7BGt25QW2UQ](https://youtu.be/7BGt25QW2UQ) · [3b1QJ6pShBA](https://youtu.be/3b1QJ6pShBA) · [DpZIBN3St9I](https://youtu.be/DpZIBN3St9I) · 재생목록 5편([mnQQC19IUw4](https://youtu.be/mnQQC19IUw4) · [W4HPRvGpnVw](https://youtu.be/W4HPRvGpnVw) · [g5Jb3nPjZSI](https://youtu.be/g5Jb3nPjZSI) · [K-JIjThki7A](https://youtu.be/K-JIjThki7A) · [K1YwnJaxtCs](https://youtu.be/K1YwnJaxtCs))
+출처 영상: [7BGt25QW2UQ](https://youtu.be/7BGt25QW2UQ) · [3b1QJ6pShBA](https://youtu.be/3b1QJ6pShBA) · [DpZIBN3St9I](https://youtu.be/DpZIBN3St9I)
+재생목록 9편: [mnQQC19IUw4](https://youtu.be/mnQQC19IUw4) · [W4HPRvGpnVw](https://youtu.be/W4HPRvGpnVw) · [g5Jb3nPjZSI](https://youtu.be/g5Jb3nPjZSI) · [K-JIjThki7A](https://youtu.be/K-JIjThki7A) · [K1YwnJaxtCs](https://youtu.be/K1YwnJaxtCs) · [wC0Qqwg9GfM](https://youtu.be/wC0Qqwg9GfM) · [fhAQ8WVTaQc](https://youtu.be/fhAQ8WVTaQc) · [V2G1Q-JipLk](https://youtu.be/V2G1Q-JipLk) · [07HM4p8AJL4](https://youtu.be/07HM4p8AJL4)
 
 ## 주의
 - 자막 있는 영상만. 자동자막은 품질 편차 있어 증류(LLM 1회)가 필요.
