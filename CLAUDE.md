@@ -41,7 +41,7 @@ lol-jgl-watch                       # 백그라운드 자동 적립
 - `riot/` — Riot API 클라이언트·모델
 - `analysis/` — 정글 지표: pathing(좌표→구역)·jungle·benchmarks·**insights**(규칙 자동분석)·**opponent**(상대 정글 요약: 지표·갱라인·동선)
 - `pipeline.py` — 수집→지표(→조언) 로직 (CLI/워처 공용)
-- `history.py` — 지표 누적 저장소 (reports/history.json)
+- `history.py` — 지표 누적 저장소, **계정별 분리**(기본=`reports/history.json`, 부캐=`history_<슬러그>.json`). 계정 섞으면 분석 무의미하므로 `--riot-id`로 조회 시 자동 분리.
 - `advisor/` — `--advice` 옵션용 claude -p 조언 (부가)
 - `report/renderer.py` — `--advice` 시 마크다운 리포트 · `report/dashboard.py` — `--dashboard` 자체완결 HTML(인라인 SVG, LLM 0)
 - `cli.py` — 수집 진입점(`--insights`/`--dashboard`/`--open`/`--no-collect`) · `watch.py` — 자동 적립 워처 · `serve.py` — 로컬 대시보드 서버(페이지 내 '업데이트' 버튼)

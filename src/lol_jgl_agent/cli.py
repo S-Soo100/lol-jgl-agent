@@ -97,9 +97,9 @@ def main() -> None:
             print(f"[!] Riot API 오류: {e}")
             return
 
-        added, total, _ = history.merge(records)
+        added, total, _ = history.merge(records, riot_id)
         _print_table(riot_id, metrics, match_ids)
-        print(f"\n새로 {added}판 추가 · 누적 {total}판 → {history.HISTORY_PATH}")
+        print(f"\n새로 {added}판 추가 · 누적 {total}판 → {history.history_path(riot_id)}")
         print("Claude Code에게 \"분석해줘\" 라고 하면 누적 데이터로 피드백해 드립니다.")
 
         if advice_result and advice_result.advice:
@@ -109,21 +109,21 @@ def main() -> None:
             print(f"\n[!] 조언 생략: {advice_result.advice_error}")
 
     # --insights/--dashboard는 방금 수집분 또는 기존 히스토리로 동작
-    newest = records[0] if records else next(iter(history.load_history()), None)
+    newest = records[0] if records else next(iter(history.load_history(riot_id)), None)
 
     if args.insights:
         if newest:
-            _print_insights(newest)
+            _print_insights(newest, riot_id)
         else:
             print("[!] 히스토리가 비어 있습니다. 먼저 수집하세요 (--count N).")
 
     if args.dashboard:
         _write_dashboard(riot_id, open_browser=args.open)
     elif args.open:
-        _open_dashboard()
+        _open_dashboard(riot_id)
 
 
-def _print_insights(newest: dict) -> None:
+def _print_insights(newest: dict, riot_id: str = "") -> None:
     """규칙 기반 자동 분석(LLM 없음)을 출력."""
     from .analysis.insights import analyze_game, render_findings, summarize_recent
 
@@ -132,19 +132,26 @@ def _print_insights(newest: dict) -> None:
     print(f"[최신 경기] {newest.get('champion')} {result} · {newest.get('duration_min')}분")
     print(render_findings(analyze_game(newest)))
 
-    recent = summarize_recent(history.load_history())
+    recent = summarize_recent(history.load_history(riot_id))
     if recent:
         print("\n[최근 추세]")
         print(render_findings(recent))
 
 
+def _dash_path(riot_id: str):
+    """계정별 대시보드 경로 (기본 계정은 dashboard.html)."""
+    from .config import REPORTS_DIR
+
+    if history.history_path(riot_id) == history.HISTORY_PATH:
+        return REPORTS_DIR / "dashboard.html"
+    return REPORTS_DIR / f"dashboard_{history._slug(riot_id)}.html"
+
+
 def _write_dashboard(riot_id: str, *, open_browser: bool = False) -> None:
     """누적 히스토리를 HTML 대시보드로 저장(선택적으로 브라우저로 연다)."""
-    from .config import REPORTS_DIR
     from .report.dashboard import write_dashboard
 
-    path = write_dashboard(history.load_history(), REPORTS_DIR / "dashboard.html",
-                           riot_id=riot_id)
+    path = write_dashboard(history.load_history(riot_id), _dash_path(riot_id), riot_id=riot_id)
     print(f"\n대시보드 생성: {path}")
     if open_browser:
         _open_path(path)
@@ -152,11 +159,9 @@ def _write_dashboard(riot_id: str, *, open_browser: bool = False) -> None:
         print("  브라우저로 열면 LLM 호출 없이 기본 피드백을 볼 수 있어요.")
 
 
-def _open_dashboard() -> None:
+def _open_dashboard(riot_id: str = "") -> None:
     """이미 생성된 대시보드를 브라우저로 연다."""
-    from .config import REPORTS_DIR
-
-    path = REPORTS_DIR / "dashboard.html"
+    path = _dash_path(riot_id)
     if path.exists():
         _open_path(path)
     else:

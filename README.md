@@ -28,6 +28,9 @@ lol-jgl-agent --count 5            # 최근 5판 → reports/history.json 누적
 lol-jgl-agent --count 2 --insights # 수집 + 규칙 기반 자동 분석(LLM 없음) 출력
 lol-jgl-agent --count 2 --dashboard # 수집 + 자체완결 HTML 대시보드 생성 (상대 정글 비교 포함)
 lol-jgl-agent --backfill-opponent   # 과거 판에 상대 정글 요약 소급(캐시 기반)
+
+# 부캐(다른 계정)는 --riot-id 로 — 히스토리/대시보드가 계정별로 자동 분리됨
+lol-jgl-agent --riot-id "부캐이름#태그" --count 5 --insights
 lol-jgl-agent --count 1 --advice   # 최신 1판 claude -p 자동 조언까지(부가)
 
 # 5) 자동 감시 — 켜두면 새 경기를 자동으로 히스토리에 적립

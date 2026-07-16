@@ -62,7 +62,7 @@ def collect_recent(settings: Settings, riot_id: str, count: int) -> tuple[list[d
 
 def backfill_opponents(settings: Settings, riot_id: str) -> tuple[int, str | None]:
     """기존 히스토리에서 opponent 없는 판을 캐시 기반으로 소급 채움. (갱신수, error)."""
-    games = history.load_history()
+    games = history.load_history(riot_id)
     todo = [g for g in games if g.get("opponent") is None]
     if not todo:
         return 0, None
@@ -78,7 +78,7 @@ def backfill_opponents(settings: Settings, riot_id: str) -> tuple[int, str | Non
     except RiotApiError as e:
         return 0, f"Riot API 오류: {e}"
     if updated:
-        history.merge(updated)  # match_id 덮어쓰기
+        history.merge(updated, riot_id)  # match_id 덮어쓰기
     return len(updated), None
 
 

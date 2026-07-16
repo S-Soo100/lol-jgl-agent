@@ -35,7 +35,7 @@ def _make_handler(settings: Settings, riot_id: str):
 
         def do_GET(self):  # noqa: N802
             if urlparse(self.path).path in ("/", "/index.html"):
-                html = render_dashboard(history.load_history(), riot_id=riot_id,
+                html = render_dashboard(history.load_history(riot_id), riot_id=riot_id,
                                         subtitle="로컬 서버 · 업데이트 버튼 사용 가능",
                                         update_url=UPDATE_PATH)
                 self._send(200, html)
@@ -52,7 +52,7 @@ def _make_handler(settings: Settings, riot_id: str):
             if err:
                 self._send(200, json.dumps({"ok": False, "error": err}), "application/json")
                 return
-            added, total, _ = history.merge(records)
+            added, total, _ = history.merge(records, riot_id)
             self._send(200, json.dumps({"ok": True, "added": added, "total": total}),
                        "application/json")
 
